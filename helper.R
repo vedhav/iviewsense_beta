@@ -10,3 +10,11 @@ popUpWindow <- function (popUpText, title = NULL, footer = NULL, easyClose = TRU
 		)
 	)
 }
+
+textPlot <- function(text = "No data avaliable", color = "#000000") {
+	plot <- ggplot()+
+		geom_text(aes(x = 0, y = 0, label = text), size = 6, color = color) +
+		labs(x = '', y = '') +
+		theme(panel.background = element_blank(), axis.text = element_blank(), axis.ticks = element_blank(), axis.line = element_blank())
+	return(plot)
+}

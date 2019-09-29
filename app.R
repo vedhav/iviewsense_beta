@@ -106,8 +106,8 @@ ui = tags$div(
 )
 
 server = function(input, output, session) {
-	mainData <- read_xlsx("Geartek.xlsx", sheet = 1, col_names = TRUE)
-	# mainData <- data.frame()
+	# mainData <- read_xlsx("Geartek.xlsx", sheet = 1, col_names = TRUE)
+	mainData <- data.frame()
 	observeEvent(input$remote_or_local, {
 		output$data_source_body_ui <- renderUI({
 			if (input$remote_or_local %% 2 == 0) {
@@ -189,31 +189,41 @@ server = function(input, output, session) {
 					plotVariables, plotVariables[20]
 				)
 			),
-			column(3, numericInput("histogram_lsl", "Enter the LSL", value = -6)),
-			column(3, numericInput("histogram_usl", "Enter the USL", value = -2))
+			column(3, numericInput("histogram_lsl", "Enter the LSL", value = 0)),
+			column(3, numericInput("histogram_usl", "Enter the USL", value = 0))
 		)
 	})
-	output$histogram_plot <- renderPlot({
-		histogram__trigger$depend()
+	observeEvent(c(
+		input$histogram_column, input$histogram_filters_family,
+		input$histogram_filters_cust, input$histogram_filters_model,
+		input$histogram_filters_result), {
 		plotData <- mainData %>%
 			filter(
 				Family %in% input$histogram_filters_family & Cust %in% input$histogram_filters_cust &
 				Model %in% input$histogram_filters_model & Result %in% input$histogram_filters_result
 			)
 		if (nrow(plotData) == 0) {
+			output$histogram_plot <- renderPlot(textPlot())
 			return(NULL)
 		}
 		plot_variable <- plotData[[input$histogram_column]]
 		plot_variable <- plot_variable[!is.na(plot_variable)]
-		process.capability(
-			qcc(
-				plot_variable,
-				type = "xbar.one",
-				nsigmas = 3,
-				plot = FALSE
-			),
-			spec.limits = c(input$histogram_lsl, input$histogram_usl)
-		)
+		lslValue <- mean(plot_variable) - 3 * sd(plot_variable)
+		uslValue <- mean(plot_variable) + 3 * sd(plot_variable)
+		updateNumericInput(session, "histogram_lsl", value = lslValue)
+		updateNumericInput(session, "histogram_usl", value = uslValue)
+		output$histogram_plot <- renderPlot({
+			histogram__trigger$depend()
+			process.capability(
+				qcc(
+					plot_variable,
+					type = "xbar.one",
+					nsigmas = 3,
+					plot = FALSE
+				),
+				spec.limits = c(input$histogram_lsl, input$histogram_usl)
+			)
+		})
 	})
 
 	output$scatter_plot_filters <- renderUI({
