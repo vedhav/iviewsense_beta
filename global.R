@@ -84,7 +84,8 @@ scatter_plot_body <- bs4TabItem(
 		fluidPage(
 			fluidRow(
 				column(12, align = "center", style = "font-size: 20px;", "Scatter plot"),
-				column(12, align = "center", "still under development!")
+				column(12, align = "center", uiOutput("scatter_plot_filters")),
+				column(12, plotlyOutput("scatter_plot"))
 			)
 		)
 	)

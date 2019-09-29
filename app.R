@@ -106,8 +106,8 @@ ui = tags$div(
 )
 
 server = function(input, output, session) {
-	# mainData <- read_xlsx("Geartek.xlsx", sheet = 1, col_names = TRUE)
-	mainData <- data.frame()
+	mainData <- read_xlsx("Geartek.xlsx", sheet = 1, col_names = TRUE)
+	# mainData <- data.frame()
 	observeEvent(input$remote_or_local, {
 		output$data_source_body_ui <- renderUI({
 			if (input$remote_or_local %% 2 == 0) {
@@ -215,6 +215,84 @@ server = function(input, output, session) {
 			spec.limits = c(input$histogram_lsl, input$histogram_usl)
 		)
 	})
+
+	output$scatter_plot_filters <- renderUI({
+		histogram__trigger$depend()
+		familyOptions <- unique(mainData$Family)
+		custOptions <- unique(mainData$Cust)
+		modelOptions <- unique(mainData$Model)
+		resultOptions <- unique(mainData$Result)
+		numericPlotVariables <- names(select_if(mainData, is.numeric))
+		factorPlotVariables <- names(select_if(mainData, is.character))
+		fluidRow(
+			column(
+				3,
+				pickerInput(
+					"scatter_plot_filters_family", "Family filter",
+					familyOptions, familyOptions, multiple = TRUE
+				)
+			),
+			column(
+				3,
+				pickerInput(
+					"scatter_plot_filters_cust", "Customer filter",
+					custOptions, custOptions, multiple = TRUE
+				)
+			),
+			column(
+				3,
+				pickerInput(
+					"scatter_plot_filters_model", "Model filter",
+					modelOptions, modelOptions, multiple = TRUE
+				)
+			),
+			column(
+				3,
+				pickerInput(
+					"scatter_plot_filters_result", "Result filter",
+					resultOptions, resultOptions, multiple = TRUE
+				)
+			),
+			column(
+				4,
+				pickerInput(
+					"scatter_plot_x_axis", "Select the X axis variable",
+					numericPlotVariables, numericPlotVariables[1]
+				)
+			),
+			column(
+				4,
+				pickerInput(
+					"scatter_plot_y_axis", "Select the X axis variable",
+					numericPlotVariables, numericPlotVariables[5]
+				)
+			),
+			column(
+				4,
+				pickerInput(
+					"scatter_plot_color_axis", "Select the color axis variable",
+					factorPlotVariables, factorPlotVariables[3]
+				)
+			)
+		)
+	})
+	output$scatter_plot <- renderPlotly({
+		histogram__trigger$depend()
+		plotData <- mainData %>%
+			filter(
+				Family %in% input$scatter_plot_filters_family & Cust %in% input$scatter_plot_filters_cust &
+				Model %in% input$scatter_plot_filters_model & Result %in% input$scatter_plot_filters_result
+			)
+		if (nrow(plotData) == 0) {
+			return(NULL)
+		}
+		plot_ly(
+			data = plotData, x = plotData[[input$scatter_plot_x_axis]],
+			y = plotData[[input$scatter_plot_y_axis]], color = plotData[[input$scatter_plot_color_axis]],
+			type = "scatter", mode = "markers", size = 5
+		)
+	})
+
 }
 
 shinyApp(ui, server)
