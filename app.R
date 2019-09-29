@@ -39,7 +39,8 @@ stratification_body <- bs4TabItem(
 	tags$div(
 		fluidPage(
 			fluidRow(
-				column(12, align = "center", style = "font-size: 20px;", "Stratification")
+				column(12, align = "center", style = "font-size: 20px;", "Stratification"),
+				column(12, align = "center", "still under development!")
 			)
 		)
 	)
@@ -51,7 +52,8 @@ control_chart_body <- bs4TabItem(
 	tags$div(
 		fluidPage(
 			fluidRow(
-				column(12, align = "center", style = "font-size: 20px;", "Control chart")
+				column(12, align = "center", style = "font-size: 20px;", "Control chart"),
+				column(12, align = "center", "still under development!")
 			)
 		)
 	)
@@ -63,7 +65,9 @@ histogram_body <- bs4TabItem(
 	tags$div(
 		fluidPage(
 			fluidRow(
-				column(12, align = "center", style = "font-size: 20px;", "Histogram")
+				column(12, align = "center", style = "font-size: 20px;", "Histogram"),
+				column(12, align = "center", uiOutput("histogram_filters")),
+				column(12, plotOutput("histogram_plot"))
 			)
 		)
 	)
@@ -75,7 +79,8 @@ scatter_plot_body <- bs4TabItem(
 	tags$div(
 		fluidPage(
 			fluidRow(
-				column(12, align = "center", style = "font-size: 20px;", "Scatter plot")
+				column(12, align = "center", style = "font-size: 20px;", "Scatter plot"),
+				column(12, align = "center", "still under development!")
 			)
 		)
 	)
@@ -87,7 +92,8 @@ pareto_body <- bs4TabItem(
 	tags$div(
 		fluidPage(
 			fluidRow(
-				column(12, align = "center", style = "font-size: 20px;", "Pareto")
+				column(12, align = "center", style = "font-size: 20px;", "Pareto"),
+				column(12, align = "center", "still under development!")
 			)
 		)
 	)
@@ -99,7 +105,8 @@ cause_effect_body <- bs4TabItem(
 	tags$div(
 		fluidPage(
 			fluidRow(
-				column(12, align = "center", style = "font-size: 20px;", "Cause & effect")
+				column(12, align = "center", style = "font-size: 20px;", "Cause & effect"),
+				column(12, align = "center", "still under development!")
 			)
 		)
 	)
@@ -111,7 +118,8 @@ check_sheet_body <- bs4TabItem(
 	tags$div(
 		fluidPage(
 			fluidRow(
-				column(12, align = "center", style = "font-size: 20px;", "Check sheet")
+				column(12, align = "center", style = "font-size: 20px;", "Check sheet"),
+				column(12, align = "center", "still under development!")
 			)
 		)
 	)
@@ -137,9 +145,9 @@ ui = tags$div(
 			".form-control {font-size: ", bodyFontSize, " !important;}",
 			".shiny-input-container {font-size: ", bodyFontSize, " !important;}",
 			".btn, .btn:link, .btn:visited {text-transform: uppercase;text-decoration: none;
-				padding: 8px 32px; display: inline-block; border-radius: 40px;
+				padding: 8px 32px; display: inline-block;
 				transition: all .2s; position: relative; font-size: 12px;
-				border: none; cursor: pointer; background-color: #4079fb; color: #ffffff;}
+				border: none; cursor: pointer;}
 			.btn:hover {transform: translateY(-3px); box-shadow: 0 7.5px 15px rgba(0, 0, 0, 0.2);}
 			.btn:hover::after {transform: scaleX(1.4) scaleY(1.6); opacity: 0;}
 			.btn:active, .btn:focus {outline: none; transform: translateY(-1px); box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);}
@@ -223,16 +231,111 @@ ui = tags$div(
 )
 
 server = function(input, output, session) {
-	mainData <- data.frame()
+	mainData <- read_xlsx("Geartek.xlsx", sheet = 1, col_names = TRUE)
+	# mainData <- data.frame()
 	observeEvent(input$remote_or_local, {
 		output$data_source_body_ui <- renderUI({
 			if (input$remote_or_local %% 2 == 0) {
-				ui <- fileInput("data_source_input_file", "Upload your file")
+				ui <- fluidRow(
+					column(
+						12,
+						fileInput(
+							"data_source_input_file",
+							"Upload your file or drag and drop it here",
+							accept = c(".xlsx", ".csv")
+						)
+					),
+					column(
+						12, HTML(
+							"Make sure that the uploaded file has the columns with these names<br>
+							<b>'Family', 'Cust', 'Model' and 'Result'</b>"
+						)
+					)
+				)
 			} else {
 				ui <- HTML("The data from PostgreSQL will be used for analysis!")
 			}
 			return(ui)
 		})
+	})
+	observeEvent(input$data_source_input_file, {
+		inFile <- input$data_source_input_file
+		if (str_detect(inFile$datapath, "\\.xlsx")) {
+			mainData <<- read_xlsx(inFile$datapath, sheet = 1, col_names = TRUE)
+		} else if (str_detect(inFile$datapath, "\\.csv")) {
+			mainData <<- read.csv(inFile$datapath,stringsAsFactors = FALSE, header = TRUE)
+		} else {
+			popUpWindow("This is an invalid file format, please upload a .xlsx or .csv file")
+			return()
+		}
+	})
+
+	output$histogram_filters <- renderUI({
+		familyOptions <- unique(mainData$Family)
+		custOptions <- unique(mainData$Cust)
+		modelOptions <- unique(mainData$Model)
+		resultOptions <- unique(mainData$Result)
+		plotVariables <- names(select_if(mainData, is.numeric))
+		fluidRow(
+			column(
+				3,
+				pickerInput(
+					"histogram_filters_family", "Family filter",
+					familyOptions, familyOptions, multiple = TRUE
+				)
+			),
+			column(
+				3,
+				pickerInput(
+					"histogram_filters_cust", "Customer filter",
+					custOptions, custOptions, multiple = TRUE
+				)
+			),
+			column(
+				3,
+				pickerInput(
+					"histogram_filters_model", "Model filter",
+					modelOptions, modelOptions, multiple = TRUE
+				)
+			),
+			column(
+				3,
+				pickerInput(
+					"histogram_filters_result", "Result filter",
+					resultOptions, resultOptions, multiple = TRUE
+				)
+			),
+			column(
+				4, offset = 1,
+				pickerInput(
+					"histogram_column", "Select the plot variable",
+					plotVariables, "CW_69.0"
+				)
+			),
+			column(3, numericInput("histogram_lsl", "Enter the LSL", value = 0)),
+			column(3, numericInput("histogram_usl", "Enter the USL", value = 0))
+		)
+	})
+	output$histogram_plot <- renderPlot({
+		plotData <- mainData %>%
+			filter(
+				Family %in% input$histogram_filters_family & Cust %in% input$histogram_filters_cust &
+				Model %in% input$histogram_filters_model & Result %in% input$histogram_filters_result
+			)
+		if (nrow(plotData) == 0) {
+			return(NULL)
+		}
+		plot_variable <- plotData[[input$histogram_column]]
+		plot_variable <- plot_variable[!is.na(plot_variable)]
+		process.capability(
+			qcc(
+				plot_variable,
+				type = "xbar.one",
+				nsigmas = 3,
+				plot = FALSE
+			),
+			spec.limits = c(input$histogram_lsl, input$histogram_usl)
+		)
 	})
 }
 
