@@ -303,6 +303,76 @@ server = function(input, output, session) {
 		)
 	})
 
+	output$control_chart_filters <- renderUI({
+		histogram__trigger$depend()
+		familyOptions <- unique(mainData$Family)
+		custOptions <- unique(mainData$Cust)
+		modelOptions <- unique(mainData$Model)
+		resultOptions <- unique(mainData$Result)
+		plotVariables <- names(select_if(mainData, is.numeric))
+		fluidRow(
+			column(
+				3,
+				pickerInput(
+					"control_chart_filters_family", "Family filter",
+					familyOptions, familyOptions, multiple = TRUE
+				)
+			),
+			column(
+				3,
+				pickerInput(
+					"control_chart_filters_cust", "Customer filter",
+					custOptions, custOptions, multiple = TRUE
+				)
+			),
+			column(
+				3,
+				pickerInput(
+					"control_chart_filters_model", "Model filter",
+					modelOptions, modelOptions, multiple = TRUE
+				)
+			),
+			column(
+				3,
+				pickerInput(
+					"control_chart_filters_result", "Result filter",
+					resultOptions, resultOptions, multiple = TRUE
+				)
+			),
+			column(
+				12,
+				pickerInput(
+					"control_chart_column", "Select the plot variable",
+					plotVariables, plotVariables[20]
+				)
+			)
+		)
+	})
+	observeEvent(c(
+		input$control_chart_column, input$histogram_filters_family,
+		input$histogram_filters_cust, input$histogram_filters_model,
+		input$histogram_filters_result), {
+		plotData <- mainData %>%
+			filter(
+				Family %in% input$control_chart_filters_family & Cust %in% input$control_chart_filters_cust &
+				Model %in% input$control_chart_filters_model & Result %in% input$control_chart_filters_result
+			)
+		if (nrow(plotData) == 0) {
+			output$control_chart_plot <- renderPlot(textPlot())
+			return(NULL)
+		}
+		plot_variable <- plotData[[input$control_chart_column]]
+		plot_variable <- plot_variable[!is.na(plot_variable)]
+		output$control_chart_plot_xbar_one <- renderPlot({
+			histogram__trigger$depend()
+			qcc(data = plot_variable, type = "xbar.one")
+		})
+		plot_variable <- matrix(cbind(plot_variable[1:length(plot_variable) - 1], plot_variable[2:length(plot_variable)]), ncol = 2)
+		output$control_chart_plot_r <- renderPlot({
+			histogram__trigger$depend()
+			qcc(data = plot_variable, type = "R")
+		})
+	})
 }
 
 shinyApp(ui, server)

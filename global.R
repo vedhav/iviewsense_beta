@@ -57,7 +57,9 @@ control_chart_body <- bs4TabItem(
 		fluidPage(
 			fluidRow(
 				column(12, align = "center", style = "font-size: 20px;", "Control chart"),
-				column(12, align = "center", "still under development!")
+				column(12, align = "center", uiOutput("control_chart_filters")),
+				column(12, plotOutput("control_chart_plot_xbar_one")),
+				column(12, plotOutput("control_chart_plot_r"))
 			)
 		)
 	)
