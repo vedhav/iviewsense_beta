@@ -163,11 +163,11 @@ server = function(input, output, session) {
 		modelOptions <<- unique(mainData$Model)
 		resultOptions <<- unique(mainData$Result)
 		operatorOptions <<- unique(mainData$Opr)
-		histogram__trigger$trigger()
+		plots__trigger$trigger()
 	})
 
 	output$histogram_filters <- renderUI({
-		histogram__trigger$depend()
+		plots__trigger$depend()
 		plotVariables <- names(select_if(mainData, is.numeric))
 		fluidRow(
 			column(
@@ -268,7 +268,7 @@ server = function(input, output, session) {
 		updateNumericInput(session, "histogram_lsl", value = round(lslValue, 2))
 		updateNumericInput(session, "histogram_usl", value = round(uslValue, 2))
 		output$histogram_plot <- renderPlot({
-			histogram__trigger$depend()
+			plots__trigger$depend()
 			process.capability(
 				qcc(
 					plot_variable,
@@ -282,7 +282,7 @@ server = function(input, output, session) {
 	})
 
 	output$scatter_plot_filters <- renderUI({
-		histogram__trigger$depend()
+		plots__trigger$depend()
 		numericPlotVariables <- names(select_if(mainData, is.numeric))
 		factorPlotVariables <- names(select_if(mainData, is.character))
 		fluidRow(
@@ -373,7 +373,7 @@ server = function(input, output, session) {
 		)
 	})
 	output$scatter_plot <- renderPlotly({
-		histogram__trigger$depend()
+		plots__trigger$depend()
 		plotData <- mainData %>%
 			filter(
 				Family %in% input$scatter_plot_filters_family & Cust %in% input$scatter_plot_filters_cust &
@@ -401,7 +401,7 @@ server = function(input, output, session) {
 	})
 
 	output$control_chart_filters <- renderUI({
-		histogram__trigger$depend()
+		plots__trigger$depend()
 		familyOptions <- unique(mainData$Family)
 		custOptions <- unique(mainData$Cust)
 		modelOptions <- unique(mainData$Model)
@@ -506,12 +506,12 @@ server = function(input, output, session) {
 		updateNumericInput(session, "control_chart_lsl", value = round(lslValue, 2))
 		updateNumericInput(session, "control_chart_usl", value = round(uslValue, 2))
 		output$control_chart_plot_xbar_one <- renderPlot({
-			histogram__trigger$depend()
+			plots__trigger$depend()
 			qcc(data = plot_variable, type = "xbar.one", limits = c(input$control_chart_lsl, input$control_chart_usl))
 		})
 	})
 	output$stratification_filters <- renderUI({
-		histogram__trigger$depend()
+		plots__trigger$depend()
 		plotVariables <- names(select_if(mainData, is.numeric))
 		fluidRow(
 			column(
@@ -559,6 +559,7 @@ server = function(input, output, session) {
 		)
 	})
 	output$stratification_table <- function() {
+		plots__trigger$depend()
 		if (nrow(mainData) == 0) return(data.frame())
 		filterData <- mainData %>%
 			filter(
