@@ -107,6 +107,9 @@ ui = tags$div(
 
 server = function(input, output, session) {
 	# mainData <- read_xlsx("Geartek.xlsx", sheet = 1, col_names = TRUE)
+	# mainData$shift <- getShifts(mainData$DateTime)
+	# mainData[is.na(mainData)] <- "NA"
+	# mainData$Date <- as.Date(mainData$DateTime)
 	mainData <- data.frame()
 	observeEvent(input$remote_or_local, {
 		output$data_source_body_ui <- renderUI({
@@ -143,43 +146,84 @@ server = function(input, output, session) {
 			popUpWindow("This is an invalid file format, please upload a .xlsx or .csv file")
 			return()
 		}
+		mainData$shift <<- getShifts(mainData$DateTime)
+		mainData[is.na(mainData)] <<- "NA"
+		mainData$Date <<- as.Date(mainData$DateTime)
+		minDate <<- as.Date(min(mainData$DateTime))
+		maxDate <<- as.Date(max(mainData$DateTime))
+		familyOptions <<- unique(mainData$Family)
+		custOptions <<- unique(mainData$Cust)
+		modelOptions <<- unique(mainData$Model)
+		resultOptions <<- unique(mainData$Result)
+		operatorOptions <<- unique(mainData$Opr)
 		histogram__trigger$trigger()
 	})
 
 	output$histogram_filters <- renderUI({
 		histogram__trigger$depend()
-		familyOptions <- unique(mainData$Family)
-		custOptions <- unique(mainData$Cust)
-		modelOptions <- unique(mainData$Model)
-		resultOptions <- unique(mainData$Result)
 		plotVariables <- names(select_if(mainData, is.numeric))
 		fluidRow(
 			column(
-				3,
+				2,
+				dateInput(
+					"histogram_filters_date_from", "From date",
+					minDate, minDate, maxDate
+				)
+			),
+			column(
+				2,
+				dateInput(
+					"histogram_filters_date_to", "To date",
+					maxDate, minDate, maxDate
+				)
+			),
+			column(
+				2,
 				pickerInput(
-					"histogram_filters_family", "Family filter",
+					"histogram_filters_family", "Family",
 					familyOptions, familyOptions, multiple = TRUE
 				)
 			),
 			column(
-				3,
+				2,
 				pickerInput(
-					"histogram_filters_cust", "Customer filter",
+					"histogram_filters_cust", "Customer",
 					custOptions, custOptions, multiple = TRUE
 				)
 			),
 			column(
-				3,
+				2,
 				pickerInput(
-					"histogram_filters_model", "Model filter",
+					"histogram_filters_model", "Model",
 					modelOptions, modelOptions, multiple = TRUE
 				)
 			),
 			column(
-				3,
+				2,
 				pickerInput(
-					"histogram_filters_result", "Result filter",
+					"histogram_filters_result", "Result",
 					resultOptions, resultOptions, multiple = TRUE
+				)
+			),
+			column(
+				4,
+				pickerInput(
+					"histogram_filters_shift", "Shift",
+					shiftNames, shiftNames, multiple = TRUE
+				)
+			),
+			column(
+				4,
+				pickerInput(
+					"histogram_filters_machine", "Machine",
+					machinesList, machinesList, multiple = TRUE
+				)
+			),
+			column(
+				4,
+				pickerInput(
+					"histogram_filters_operator", "Operator",
+					operatorOptions, operatorOptions, multiple = TRUE
 				)
 			),
 			column(
@@ -189,31 +233,275 @@ server = function(input, output, session) {
 					plotVariables, plotVariables[20]
 				)
 			),
-			column(3, numericInput("histogram_lsl", "Enter the LSL", value = -6)),
-			column(3, numericInput("histogram_usl", "Enter the USL", value = -2))
+			column(3, numericInput("histogram_lsl", "Enter the LSL", value = 0)),
+			column(3, numericInput("histogram_usl", "Enter the USL", value = 0))
 		)
 	})
-	output$histogram_plot <- renderPlot({
-		histogram__trigger$depend()
+	observeEvent(c(
+		input$histogram_column, input$histogram_filters_family,
+		input$histogram_filters_cust, input$histogram_filters_model,
+		input$histogram_filters_result, input$histogram_filters_date_from,
+		input$histogram_filters_date_to, input$histogram_filters_shift,
+		input$histogram_filters_operator), {
 		plotData <- mainData %>%
 			filter(
 				Family %in% input$histogram_filters_family & Cust %in% input$histogram_filters_cust &
-				Model %in% input$histogram_filters_model & Result %in% input$histogram_filters_result
+				Model %in% input$histogram_filters_model & Result %in% input$histogram_filters_result &
+				Date >= input$histogram_filters_date_from & Date <= input$histogram_filters_date_to &
+				shift %in% input$histogram_filters_shift & Opr %in% input$histogram_filters_operator
 			)
 		if (nrow(plotData) == 0) {
+			output$histogram_plot <- renderPlot(textPlot())
 			return(NULL)
 		}
 		plot_variable <- plotData[[input$histogram_column]]
 		plot_variable <- plot_variable[!is.na(plot_variable)]
-		process.capability(
-			qcc(
-				plot_variable,
-				type = "xbar.one",
-				nsigmas = 3,
-				plot = FALSE
+		lslValue <- mean(plot_variable) - 3 * sd(plot_variable)
+		uslValue <- mean(plot_variable) + 3 * sd(plot_variable)
+		updateNumericInput(session, "histogram_lsl", value = round(lslValue, 2))
+		updateNumericInput(session, "histogram_usl", value = round(uslValue, 2))
+		output$histogram_plot <- renderPlot({
+			histogram__trigger$depend()
+			process.capability(
+				qcc(
+					plot_variable,
+					type = "xbar.one",
+					nsigmas = 3,
+					plot = FALSE
+				),
+				spec.limits = c(input$histogram_lsl, input$histogram_usl)
+			)
+		})
+	})
+
+	output$scatter_plot_filters <- renderUI({
+		histogram__trigger$depend()
+		numericPlotVariables <- names(select_if(mainData, is.numeric))
+		factorPlotVariables <- names(select_if(mainData, is.character))
+		fluidRow(
+			column(
+				2,
+				dateInput(
+					"scatter_plot_filters_date_from", "From date",
+					minDate, minDate, maxDate
+				)
 			),
-			spec.limits = c(input$histogram_lsl, input$histogram_usl)
+			column(
+				2,
+				dateInput(
+					"scatter_plot_filters_date_to", "To date",
+					maxDate, minDate, maxDate
+				)
+			),
+			column(
+				2,
+				pickerInput(
+					"scatter_plot_filters_family", "Family",
+					familyOptions, familyOptions, multiple = TRUE
+				)
+			),
+			column(
+				2,
+				pickerInput(
+					"scatter_plot_filters_cust", "Customer",
+					custOptions, custOptions, multiple = TRUE
+				)
+			),
+			column(
+				2,
+				pickerInput(
+					"scatter_plot_filters_model", "Model",
+					modelOptions, modelOptions, multiple = TRUE
+				)
+			),
+			column(
+				2,
+				pickerInput(
+					"scatter_plot_filters_result", "Result",
+					resultOptions, resultOptions, multiple = TRUE
+				)
+			),
+			column(
+				4,
+				pickerInput(
+					"scatter_plot_filters_shift", "Shift",
+					shiftNames, shiftNames, multiple = TRUE
+				)
+			),
+			column(
+				4,
+				pickerInput(
+					"scatter_plot_filters_machine", "Machine",
+					machinesList, machinesList, multiple = TRUE
+				)
+			),
+			column(
+				4,
+				pickerInput(
+					"scatter_plot_filters_operator", "Operator",
+					operatorOptions, operatorOptions, multiple = TRUE
+				)
+			),
+			column(
+				4,
+				pickerInput(
+					"scatter_plot_x_axis", "Select the X axis variable",
+					numericPlotVariables, numericPlotVariables[1]
+				)
+			),
+			column(
+				4,
+				pickerInput(
+					"scatter_plot_y_axis", "Select the X axis variable",
+					numericPlotVariables, numericPlotVariables[2]
+				)
+			),
+			column(
+				4,
+				pickerInput(
+					"scatter_plot_color_axis", "Select the color axis variable",
+					c("No color", factorPlotVariables), "No color"
+				)
+			)
 		)
+	})
+	output$scatter_plot <- renderPlotly({
+		histogram__trigger$depend()
+		plotData <- mainData %>%
+			filter(
+				Family %in% input$scatter_plot_filters_family & Cust %in% input$scatter_plot_filters_cust &
+				Model %in% input$scatter_plot_filters_model & Result %in% input$scatter_plot_filters_result &
+				Date >= input$scatter_plot_filters_date_from & Date <= input$scatter_plot_filters_date_to &
+				shift %in% input$scatter_plot_filters_shift & Opr %in% input$scatter_plot_filters_operator
+			)
+		if (nrow(plotData) == 0) {
+			return(ggplotly(textPlot()))
+		}
+		if (input$scatter_plot_color_axis == "No color") {
+			plot <- plot_ly(
+				data = plotData, x = plotData[[input$scatter_plot_x_axis]],
+				y = plotData[[input$scatter_plot_y_axis]],
+				type = "scatter", mode = "markers", size = 5
+			)
+		} else {
+			plot <- plot_ly(
+				data = plotData, x = plotData[[input$scatter_plot_x_axis]],
+				y = plotData[[input$scatter_plot_y_axis]], color = plotData[[input$scatter_plot_color_axis]],
+				type = "scatter", mode = "markers", size = 5
+			)
+		}
+		return(plot)
+	})
+
+	output$control_chart_filters <- renderUI({
+		histogram__trigger$depend()
+		familyOptions <- unique(mainData$Family)
+		custOptions <- unique(mainData$Cust)
+		modelOptions <- unique(mainData$Model)
+		resultOptions <- unique(mainData$Result)
+		plotVariables <- names(select_if(mainData, is.numeric))
+		fluidRow(
+			column(
+				2,
+				dateInput(
+					"control_chart_filters_date_from", "From date",
+					minDate, minDate, maxDate
+				)
+			),
+			column(
+				2,
+				dateInput(
+					"control_chart_filters_date_to", "To date",
+					maxDate, minDate, maxDate
+				)
+			),
+			column(
+				2,
+				pickerInput(
+					"control_chart_filters_family", "Family",
+					familyOptions, familyOptions, multiple = TRUE
+				)
+			),
+			column(
+				2,
+				pickerInput(
+					"control_chart_filters_cust", "Customer",
+					custOptions, custOptions, multiple = TRUE
+				)
+			),
+			column(
+				2,
+				pickerInput(
+					"control_chart_filters_model", "Model",
+					modelOptions, modelOptions, multiple = TRUE
+				)
+			),
+			column(
+				2,
+				pickerInput(
+					"control_chart_filters_result", "Result",
+					resultOptions, resultOptions, multiple = TRUE
+				)
+			),
+			column(
+				4,
+				pickerInput(
+					"control_chart_filters_shift", "Shift",
+					shiftNames, shiftNames, multiple = TRUE
+				)
+			),
+			column(
+				4,
+				pickerInput(
+					"control_chart_filters_machine", "Machine",
+					machinesList, machinesList, multiple = TRUE
+				)
+			),
+			column(
+				4,
+				pickerInput(
+					"control_chart_filters_operator", "Operator",
+					operatorOptions, operatorOptions, multiple = TRUE
+				)
+			),
+			column(
+				4, offset = 1,
+				pickerInput(
+					"control_chart_column", "Select the plot variable",
+					plotVariables, plotVariables[20]
+				)
+			),
+			column(3, numericInput("control_chart_lsl", "Enter the LSL", value = 0)),
+			column(3, numericInput("control_chart_usl", "Enter the USL", value = 0))
+		)
+	})
+	observeEvent(c(
+		input$control_chart_column, input$control_chart_filters_family,
+		input$control_chart_filters_cust, input$control_chart_filters_model,
+		input$control_chart_filters_result, input$control_chart_filters_date_from,
+		input$control_chart_filters_date_to, input$control_chart_filters_shift,
+		input$control_chart_filters_operator), {
+		plotData <- mainData %>%
+			filter(
+				Family %in% input$control_chart_filters_family & Cust %in% input$control_chart_filters_cust &
+				Model %in% input$control_chart_filters_model & Result %in% input$control_chart_filters_result &
+				Date >= input$control_chart_filters_date_from & Date <= input$control_chart_filters_date_to &
+				shift %in% input$control_chart_filters_shift & Opr %in% input$control_chart_filters_operator
+			)
+		if (nrow(plotData) == 0) {
+			output$control_chart_plot <- renderPlot(textPlot())
+			return(NULL)
+		}
+		plot_variable <- plotData[[input$control_chart_column]]
+		plot_variable <- plot_variable[!is.na(plot_variable)]
+		lslValue <- mean(plot_variable) - 3 * sd(plot_variable)
+		uslValue <- mean(plot_variable) + 3 * sd(plot_variable)
+		updateNumericInput(session, "control_chart_lsl", value = round(lslValue, 2))
+		updateNumericInput(session, "control_chart_usl", value = round(uslValue, 2))
+		output$control_chart_plot_xbar_one <- renderPlot({
+			histogram__trigger$depend()
+			qcc(data = plot_variable, type = "xbar.one", limits = c(input$control_chart_lsl, input$control_chart_usl))
+		})
 	})
 }
 

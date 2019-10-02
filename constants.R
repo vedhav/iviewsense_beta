@@ -2,7 +2,7 @@
 bodyFontSize <<- "12px"
 buttonStyle <<- "background-color: #4079fb; color: #fff;"
 
-makeReactiveTrigger <- function() {
+makeReactiveTrigger <<- function() {
 	rv <- reactiveValues(a = 0)
 	list(
 		depend = function() {
@@ -15,4 +15,15 @@ makeReactiveTrigger <- function() {
 	)
 }
 
-histogram__trigger <- makeReactiveTrigger()
+histogram__trigger <<- makeReactiveTrigger()
+
+machinesList <<- c("Geartek", "Testek", "Elnix", "Dynaspede", "RT Tek")
+shiftNames <<- c("Shift One", "Shift Two", "Shift Three")
+
+minDate <<- NULL
+maxDate <<- NULL
+familyOptions <- NULL
+custOptions <- NULL
+modelOptions <- NULL
+resultOptions <- NULL
+operatorOptions <- NULL
