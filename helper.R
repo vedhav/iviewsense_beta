@@ -30,3 +30,10 @@ getShifts <- function(hourList) {
 	shiftString[shiftThreecondition] <- shiftNames[3]
 	return(shiftString)
 }
+
+evaluateFailPass <- function(passFail) {
+	returnBool <- rep(NA, length(passFail))
+	returnBool[passFail == passName] <- TRUE
+	returnBool[passFail == failName] <- FALSE
+	return(returnBool)
+}

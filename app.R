@@ -510,6 +510,79 @@ server = function(input, output, session) {
 			qcc(data = plot_variable, type = "xbar.one", limits = c(input$control_chart_lsl, input$control_chart_usl))
 		})
 	})
+	output$stratification_filters <- renderUI({
+		histogram__trigger$depend()
+		plotVariables <- names(select_if(mainData, is.numeric))
+		fluidRow(
+			column(
+				2,
+				dateInput(
+					"stratification_filters_date_from", "From date",
+					minDate, minDate, maxDate
+				)
+			),
+			column(
+				2,
+				dateInput(
+					"stratification_filters_date_to", "To date",
+					maxDate, minDate, maxDate
+				)
+			),
+			column(
+				2,
+				pickerInput(
+					"stratification_filters_family", "Family",
+					familyOptions, familyOptions, multiple = TRUE
+				)
+			),
+			column(
+				2,
+				pickerInput(
+					"stratification_filters_cust", "Customer",
+					custOptions, custOptions, multiple = TRUE
+				)
+			),
+			column(
+				2,
+				pickerInput(
+					"stratification_filters_model", "Model",
+					modelOptions, modelOptions, multiple = TRUE
+				)
+			),
+			column(
+				2,
+				pickerInput(
+					"stratification_filters_operator", "Operator",
+					operatorOptions, operatorOptions, multiple = TRUE
+				)
+			)
+		)
+	})
+	output$stratification_table <- function() {
+		if (nrow(mainData) == 0) return(data.frame())
+		filterData <- mainData %>%
+			filter(
+				Date >= input$stratification_filters_date_from & Date <= input$stratification_filters_date_to &
+				Family %in% input$stratification_filters_family & Cust %in% input$stratification_filters_cust &
+				Model %in% input$stratification_filters_model & Opr %in% input$stratification_filters_operator
+			)
+		filterData$hasPassed <- evaluateFailPass(filterData$Result)
+		constFields <- filterData %>% select(Family, Cust) %>% distinct(Family, Cust)
+		unformattedData <- filterData %>% group_by(Family, Cust, shift) %>%
+			summarise(passCount = sum(hasPassed), failCount = n() - passCount) %>%
+			ungroup() %>% select(Family, Cust, shift, passCount, failCount)
+		shiftOneData <- constFields %>% left_join(unformattedData %>%
+			filter(shift == shiftNames[1])) %>% select(Family, Customer = Cust, Pass = passCount, Fail = failCount) %>%
+			arrange(Family, Customer)
+		shiftTwoData <- constFields %>% left_join(unformattedData %>%
+			filter(shift == shiftNames[2])) %>% arrange(Family, Cust) %>% select(Pass = passCount, Fail = failCount)
+		shiftThreeData <- constFields %>% left_join(unformattedData %>%
+			filter(shift == shiftNames[3])) %>% arrange(Family, Cust) %>% select(Pass = passCount, Fail = failCount)
+		tableData <- cbind(shiftOneData, shiftTwoData, shiftThreeData)
+		kable(tableData, "html") %>%
+			kable_styling("striped", full_width = F) %>%
+			add_header_above(c(" " = 2, "Shift 1" = 2, "Shift 2" = 2, "Shift 3" = 2))
+	}
 }
 
 shinyApp(ui, server)

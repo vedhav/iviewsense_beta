@@ -19,6 +19,9 @@ histogram__trigger <<- makeReactiveTrigger()
 
 machinesList <<- c("Geartek", "Testek", "Elnix", "Dynaspede", "RT Tek")
 shiftNames <<- c("Shift One", "Shift Two", "Shift Three")
+timeFilterTypes <<- c("Date", "Month", "Year")
+passName <<- "Pass!"
+failName <<- "Fail!"
 
 minDate <<- NULL
 maxDate <<- NULL
