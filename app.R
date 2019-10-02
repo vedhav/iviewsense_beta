@@ -110,6 +110,13 @@ server = function(input, output, session) {
 	# mainData$shift <- getShifts(mainData$DateTime)
 	# mainData[is.na(mainData)] <- "NA"
 	# mainData$Date <- as.Date(mainData$DateTime)
+	# minDate <- as.Date(min(mainData$DateTime))
+	# maxDate <- as.Date(max(mainData$DateTime))
+	# familyOptions <- unique(mainData$Family)
+	# custOptions <- unique(mainData$Cust)
+	# modelOptions <- unique(mainData$Model)
+	# resultOptions <- unique(mainData$Result)
+	# operatorOptions <- unique(mainData$Opr)
 	mainData <- data.frame()
 	observeEvent(input$remote_or_local, {
 		output$data_source_body_ui <- renderUI({
@@ -156,11 +163,11 @@ server = function(input, output, session) {
 		modelOptions <<- unique(mainData$Model)
 		resultOptions <<- unique(mainData$Result)
 		operatorOptions <<- unique(mainData$Opr)
-		histogram__trigger$trigger()
+		plots__trigger$trigger()
 	})
 
 	output$histogram_filters <- renderUI({
-		histogram__trigger$depend()
+		plots__trigger$depend()
 		plotVariables <- names(select_if(mainData, is.numeric))
 		fluidRow(
 			column(
@@ -261,7 +268,7 @@ server = function(input, output, session) {
 		updateNumericInput(session, "histogram_lsl", value = round(lslValue, 2))
 		updateNumericInput(session, "histogram_usl", value = round(uslValue, 2))
 		output$histogram_plot <- renderPlot({
-			histogram__trigger$depend()
+			plots__trigger$depend()
 			process.capability(
 				qcc(
 					plot_variable,
@@ -275,7 +282,7 @@ server = function(input, output, session) {
 	})
 
 	output$scatter_plot_filters <- renderUI({
-		histogram__trigger$depend()
+		plots__trigger$depend()
 		numericPlotVariables <- names(select_if(mainData, is.numeric))
 		factorPlotVariables <- names(select_if(mainData, is.character))
 		fluidRow(
@@ -366,7 +373,7 @@ server = function(input, output, session) {
 		)
 	})
 	output$scatter_plot <- renderPlotly({
-		histogram__trigger$depend()
+		plots__trigger$depend()
 		plotData <- mainData %>%
 			filter(
 				Family %in% input$scatter_plot_filters_family & Cust %in% input$scatter_plot_filters_cust &
@@ -394,7 +401,7 @@ server = function(input, output, session) {
 	})
 
 	output$control_chart_filters <- renderUI({
-		histogram__trigger$depend()
+		plots__trigger$depend()
 		familyOptions <- unique(mainData$Family)
 		custOptions <- unique(mainData$Cust)
 		modelOptions <- unique(mainData$Model)
@@ -499,10 +506,84 @@ server = function(input, output, session) {
 		updateNumericInput(session, "control_chart_lsl", value = round(lslValue, 2))
 		updateNumericInput(session, "control_chart_usl", value = round(uslValue, 2))
 		output$control_chart_plot_xbar_one <- renderPlot({
-			histogram__trigger$depend()
+			plots__trigger$depend()
 			qcc(data = plot_variable, type = "xbar.one", limits = c(input$control_chart_lsl, input$control_chart_usl))
 		})
 	})
+	output$stratification_filters <- renderUI({
+		plots__trigger$depend()
+		plotVariables <- names(select_if(mainData, is.numeric))
+		fluidRow(
+			column(
+				2,
+				dateInput(
+					"stratification_filters_date_from", "From date",
+					minDate, minDate, maxDate
+				)
+			),
+			column(
+				2,
+				dateInput(
+					"stratification_filters_date_to", "To date",
+					maxDate, minDate, maxDate
+				)
+			),
+			column(
+				2,
+				pickerInput(
+					"stratification_filters_family", "Family",
+					familyOptions, familyOptions, multiple = TRUE
+				)
+			),
+			column(
+				2,
+				pickerInput(
+					"stratification_filters_cust", "Customer",
+					custOptions, custOptions, multiple = TRUE
+				)
+			),
+			column(
+				2,
+				pickerInput(
+					"stratification_filters_model", "Model",
+					modelOptions, modelOptions, multiple = TRUE
+				)
+			),
+			column(
+				2,
+				pickerInput(
+					"stratification_filters_operator", "Operator",
+					operatorOptions, operatorOptions, multiple = TRUE
+				)
+			)
+		)
+	})
+	output$stratification_table <- function() {
+		plots__trigger$depend()
+		if (nrow(mainData) == 0) return(data.frame())
+		filterData <- mainData %>%
+			filter(
+				Date >= input$stratification_filters_date_from & Date <= input$stratification_filters_date_to &
+				Family %in% input$stratification_filters_family & Cust %in% input$stratification_filters_cust &
+				Model %in% input$stratification_filters_model & Opr %in% input$stratification_filters_operator
+			)
+		filterData$hasPassed <- evaluateFailPass(filterData$Result)
+		constFields <- filterData %>% select(Family, Cust) %>% distinct(Family, Cust)
+		unformattedData <- filterData %>% group_by(Family, Cust, shift) %>%
+			summarise(passCount = sum(hasPassed), failCount = n() - passCount) %>%
+			ungroup() %>% select(Family, Cust, shift, passCount, failCount)
+		shiftOneData <- constFields %>% left_join(unformattedData %>%
+			filter(shift == shiftNames[1])) %>% select(Family, Customer = Cust, Pass = passCount, Fail = failCount) %>%
+			arrange(Family, Customer)
+		shiftTwoData <- constFields %>% left_join(unformattedData %>%
+			filter(shift == shiftNames[2])) %>% arrange(Family, Cust) %>% select(Pass = passCount, Fail = failCount)
+		shiftThreeData <- constFields %>% left_join(unformattedData %>%
+			filter(shift == shiftNames[3])) %>% arrange(Family, Cust) %>% select(Pass = passCount, Fail = failCount)
+		tableData <- cbind(shiftOneData, shiftTwoData, shiftThreeData)
+		kable(tableData, "html") %>%
+			kable_styling("striped", full_width = F) %>%
+			add_header_above(c(" " = 2, "Shift 1" = 2, "Shift 2" = 2, "Shift 3" = 2))
+	}
 }
 
 shinyApp(ui, server)

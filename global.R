@@ -44,7 +44,8 @@ stratification_body <- bs4TabItem(
 		fluidPage(
 			fluidRow(
 				column(12, align = "center", style = "font-size: 20px;", "Stratification"),
-				column(12, align = "center", "still under development!")
+				column(12, align = "center", uiOutput("stratification_filters")),
+				column(12, align = "center", tableOutput("stratification_table"))
 			)
 		)
 	)
