@@ -107,6 +107,9 @@ ui = tags$div(
 
 server = function(input, output, session) {
 	# mainData <- read_xlsx("Geartek.xlsx", sheet = 1, col_names = TRUE)
+	# mainData$shift <- getShifts(mainData$DateTime)
+	# mainData[is.na(mainData)] <- "NA"
+	# mainData$Date <- as.Date(mainData$DateTime)
 	mainData <- data.frame()
 	observeEvent(input$remote_or_local, {
 		output$data_source_body_ui <- renderUI({
@@ -143,6 +146,11 @@ server = function(input, output, session) {
 			popUpWindow("This is an invalid file format, please upload a .xlsx or .csv file")
 			return()
 		}
+		mainData$shift <<- getShifts(mainData$DateTime)
+		mainData[is.na(mainData)] <<- "NA"
+		mainData$Date <<- as.Date(mainData$DateTime)
+		minDate <<- as.Date(min(mainData$DateTime))
+		maxDate <<- as.Date(max(mainData$DateTime))
 		histogram__trigger$trigger()
 	})
 
@@ -152,34 +160,70 @@ server = function(input, output, session) {
 		custOptions <- unique(mainData$Cust)
 		modelOptions <- unique(mainData$Model)
 		resultOptions <- unique(mainData$Result)
+		operatorOptions <- unique(mainData$Opr)
 		plotVariables <- names(select_if(mainData, is.numeric))
 		fluidRow(
 			column(
-				3,
+				2,
+				dateInput(
+					"histogram_filters_date_from", "From date",
+					minDate, minDate, maxDate
+				)
+			),
+			column(
+				2,
+				dateInput(
+					"histogram_filters_date_to", "To date",
+					maxDate, minDate, maxDate
+				)
+			),
+			column(
+				2,
 				pickerInput(
 					"histogram_filters_family", "Family filter",
 					familyOptions, familyOptions, multiple = TRUE
 				)
 			),
 			column(
-				3,
+				2,
 				pickerInput(
 					"histogram_filters_cust", "Customer filter",
 					custOptions, custOptions, multiple = TRUE
 				)
 			),
 			column(
-				3,
+				2,
 				pickerInput(
 					"histogram_filters_model", "Model filter",
 					modelOptions, modelOptions, multiple = TRUE
 				)
 			),
 			column(
-				3,
+				2,
 				pickerInput(
 					"histogram_filters_result", "Result filter",
 					resultOptions, resultOptions, multiple = TRUE
+				)
+			),
+			column(
+				4,
+				pickerInput(
+					"histogram_filters_shift", "Shift",
+					shiftNames, shiftNames, multiple = TRUE
+				)
+			),
+			column(
+				4,
+				pickerInput(
+					"histogram_filters_machine", "Machine",
+					machinesList, machinesList, multiple = TRUE
+				)
+			),
+			column(
+				4,
+				pickerInput(
+					"histogram_filters_operator", "Operator",
+					operatorOptions, operatorOptions, multiple = TRUE
 				)
 			),
 			column(
@@ -196,11 +240,14 @@ server = function(input, output, session) {
 	observeEvent(c(
 		input$histogram_column, input$histogram_filters_family,
 		input$histogram_filters_cust, input$histogram_filters_model,
-		input$histogram_filters_result), {
+		input$histogram_filters_result, input$histogram_filters_shift,
+		input$histogram_filters_operator), {
 		plotData <- mainData %>%
 			filter(
 				Family %in% input$histogram_filters_family & Cust %in% input$histogram_filters_cust &
-				Model %in% input$histogram_filters_model & Result %in% input$histogram_filters_result
+				Model %in% input$histogram_filters_model & Result %in% input$histogram_filters_result &
+				Date >= input$histogram_filters_date_from & Date <= input$histogram_filters_date_to &
+				shift %in% input$histogram_filters_shift & Opr %in% input$histogram_filters_operator
 			)
 		if (nrow(plotData) == 0) {
 			output$histogram_plot <- renderPlot(textPlot())
