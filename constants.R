@@ -22,3 +22,8 @@ shiftNames <<- c("Shift One", "Shift Two", "Shift Three")
 
 minDate <<- NULL
 maxDate <<- NULL
+familyOptions <- NULL
+custOptions <- NULL
+modelOptions <- NULL
+resultOptions <- NULL
+operatorOptions <- NULL
