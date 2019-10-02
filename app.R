@@ -110,6 +110,13 @@ server = function(input, output, session) {
 	# mainData$shift <- getShifts(mainData$DateTime)
 	# mainData[is.na(mainData)] <- "NA"
 	# mainData$Date <- as.Date(mainData$DateTime)
+	# minDate <- as.Date(min(mainData$DateTime))
+	# maxDate <- as.Date(max(mainData$DateTime))
+	# familyOptions <- unique(mainData$Family)
+	# custOptions <- unique(mainData$Cust)
+	# modelOptions <- unique(mainData$Model)
+	# resultOptions <- unique(mainData$Result)
+	# operatorOptions <- unique(mainData$Opr)
 	mainData <- data.frame()
 	observeEvent(input$remote_or_local, {
 		output$data_source_body_ui <- renderUI({
