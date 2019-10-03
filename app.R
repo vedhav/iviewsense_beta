@@ -115,6 +115,7 @@ server = function(input, output, session) {
 	# modelOptions <- unique(mainData$Model)
 	# resultOptions <- unique(mainData$Result)
 	# operatorOptions <- unique(mainData$Opr)
+	# machineOptions <- unique(mainData$Machine)
 	mainData <- data.frame()
 	observeEvent(input$remote_or_local, {
 		output$data_source_body_ui <- renderUI({
@@ -170,6 +171,7 @@ server = function(input, output, session) {
 		modelOptions <<- unique(mainData$Model)
 		resultOptions <<- unique(mainData$Result)
 		operatorOptions <<- unique(mainData$Opr)
+		machineOptions <<- unique(mainData$Machine)
 		plots__trigger$trigger()
 	})
 
@@ -235,7 +237,7 @@ server = function(input, output, session) {
 				4,
 				pickerInput(
 					"histogram_filters_machine", "Machine",
-					machinesList, machinesList, multiple = TRUE,
+					machineOptions, machineOptions, multiple = TRUE,
 					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
 				)
 			),
@@ -264,13 +266,14 @@ server = function(input, output, session) {
 		input$histogram_filters_cust, input$histogram_filters_model,
 		input$histogram_filters_result, input$histogram_filters_date_from,
 		input$histogram_filters_date_to, input$histogram_filters_shift,
-		input$histogram_filters_operator), {
+		input$histogram_filters_operator, input$histogram_filters_machine), {
 		plotData <- mainData %>%
 			filter(
 				Family %in% input$histogram_filters_family & Cust %in% input$histogram_filters_cust &
 				Model %in% input$histogram_filters_model & Result %in% input$histogram_filters_result &
 				Date >= input$histogram_filters_date_from & Date <= input$histogram_filters_date_to &
-				shift %in% input$histogram_filters_shift & Opr %in% input$histogram_filters_operator
+				shift %in% input$histogram_filters_shift & Opr %in% input$histogram_filters_operator &
+				Machine %in% input$histogram_filters_machine
 			)
 		if (nrow(plotData) == 0) {
 			output$histogram_plot <- renderPlot(textPlot())
@@ -364,7 +367,7 @@ server = function(input, output, session) {
 				4,
 				pickerInput(
 					"scatter_plot_filters_machine", "Machine",
-					machinesList, machinesList, multiple = TRUE,
+					machineOptions, machineOptions, multiple = TRUE,
 					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
 				)
 			),
@@ -409,7 +412,8 @@ server = function(input, output, session) {
 				Family %in% input$scatter_plot_filters_family & Cust %in% input$scatter_plot_filters_cust &
 				Model %in% input$scatter_plot_filters_model & Result %in% input$scatter_plot_filters_result &
 				Date >= input$scatter_plot_filters_date_from & Date <= input$scatter_plot_filters_date_to &
-				shift %in% input$scatter_plot_filters_shift & Opr %in% input$scatter_plot_filters_operator
+				shift %in% input$scatter_plot_filters_shift & Opr %in% input$scatter_plot_filters_operator &
+				Machine %in% input$scatter_plot_filters_machine
 			)
 		if (nrow(plotData) == 0) {
 			return(ggplotly(textPlot()))
@@ -496,7 +500,7 @@ server = function(input, output, session) {
 				4,
 				pickerInput(
 					"control_chart_filters_machine", "Machine",
-					machinesList, machinesList, multiple = TRUE,
+					machineOptions, machineOptions, multiple = TRUE,
 					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
 				)
 			),
@@ -525,13 +529,14 @@ server = function(input, output, session) {
 		input$control_chart_filters_cust, input$control_chart_filters_model,
 		input$control_chart_filters_result, input$control_chart_filters_date_from,
 		input$control_chart_filters_date_to, input$control_chart_filters_shift,
-		input$control_chart_filters_operator), {
+		input$control_chart_filters_operator, input$control_chart_filters_machine), {
 		plotData <- mainData %>%
 			filter(
 				Family %in% input$control_chart_filters_family & Cust %in% input$control_chart_filters_cust &
 				Model %in% input$control_chart_filters_model & Result %in% input$control_chart_filters_result &
 				Date >= input$control_chart_filters_date_from & Date <= input$control_chart_filters_date_to &
-				shift %in% input$control_chart_filters_shift & Opr %in% input$control_chart_filters_operator
+				shift %in% input$control_chart_filters_shift & Opr %in% input$control_chart_filters_operator &
+				Machine %in% input$control_chart_filters_machine
 			)
 		if (nrow(plotData) == 0) {
 			output$control_chart_plot_xbar_one <- renderPlot(textPlot())

@@ -62,6 +62,7 @@ formatData <- function(data) {
     data$Date_Time <- as.POSIXct(data$Date_Time)
     data$shift <- getShifts(data$Date_Time)
     data$Date <- as.Date(data$Date_Time)
+    data$Machine <- as.character(data$Machine)
     return(data)
 }
 
