@@ -188,56 +188,64 @@ server = function(input, output, session) {
 				2,
 				pickerInput(
 					"histogram_filters_family", "Family",
-					familyOptions, familyOptions, multiple = TRUE
+					familyOptions, familyOptions, multiple = TRUE,
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
 				)
 			),
 			column(
 				2,
 				pickerInput(
 					"histogram_filters_cust", "Customer",
-					custOptions, custOptions, multiple = TRUE
+					custOptions, custOptions, multiple = TRUE,
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
 				)
 			),
 			column(
 				2,
 				pickerInput(
 					"histogram_filters_model", "Model",
-					modelOptions, modelOptions, multiple = TRUE
+					modelOptions, modelOptions, multiple = TRUE,
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
 				)
 			),
 			column(
 				2,
 				pickerInput(
 					"histogram_filters_result", "Result",
-					resultOptions, resultOptions, multiple = TRUE
+					resultOptions, resultOptions, multiple = TRUE,
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
 				)
 			),
 			column(
 				4,
 				pickerInput(
 					"histogram_filters_shift", "Shift",
-					shiftNames, shiftNames, multiple = TRUE
+					shiftNames, shiftNames, multiple = TRUE,
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
 				)
 			),
 			column(
 				4,
 				pickerInput(
 					"histogram_filters_machine", "Machine",
-					machinesList, machinesList, multiple = TRUE
+					machinesList, machinesList, multiple = TRUE,
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
 				)
 			),
 			column(
 				4,
 				pickerInput(
 					"histogram_filters_operator", "Operator",
-					operatorOptions, operatorOptions, multiple = TRUE
+					operatorOptions, operatorOptions, multiple = TRUE,
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
 				)
 			),
 			column(
 				4, offset = 1,
 				pickerInput(
 					"histogram_column", "Select the plot variable",
-					plotVariables, plotVariables[20]
+					plotVariables, plotVariables[20],
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
 				)
 			),
 			column(3, numericInput("histogram_lsl", "Enter the LSL", value = 0)),
@@ -304,70 +312,80 @@ server = function(input, output, session) {
 				2,
 				pickerInput(
 					"scatter_plot_filters_family", "Family",
-					familyOptions, familyOptions, multiple = TRUE
+					familyOptions, familyOptions, multiple = TRUE,
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
 				)
 			),
 			column(
 				2,
 				pickerInput(
 					"scatter_plot_filters_cust", "Customer",
-					custOptions, custOptions, multiple = TRUE
+					custOptions, custOptions, multiple = TRUE,
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
 				)
 			),
 			column(
 				2,
 				pickerInput(
 					"scatter_plot_filters_model", "Model",
-					modelOptions, modelOptions, multiple = TRUE
+					modelOptions, modelOptions, multiple = TRUE,
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
 				)
 			),
 			column(
 				2,
 				pickerInput(
 					"scatter_plot_filters_result", "Result",
-					resultOptions, resultOptions, multiple = TRUE
+					resultOptions, resultOptions, multiple = TRUE,
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
 				)
 			),
 			column(
 				4,
 				pickerInput(
 					"scatter_plot_filters_shift", "Shift",
-					shiftNames, shiftNames, multiple = TRUE
+					shiftNames, shiftNames, multiple = TRUE,
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
 				)
 			),
 			column(
 				4,
 				pickerInput(
 					"scatter_plot_filters_machine", "Machine",
-					machinesList, machinesList, multiple = TRUE
+					machinesList, machinesList, multiple = TRUE,
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
 				)
 			),
 			column(
 				4,
 				pickerInput(
 					"scatter_plot_filters_operator", "Operator",
-					operatorOptions, operatorOptions, multiple = TRUE
+					operatorOptions, operatorOptions, multiple = TRUE,
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
 				)
 			),
 			column(
 				4,
 				pickerInput(
 					"scatter_plot_x_axis", "Select the X axis variable",
-					numericPlotVariables, numericPlotVariables[1]
+					numericPlotVariables, numericPlotVariables[1],
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
 				)
 			),
 			column(
 				4,
 				pickerInput(
 					"scatter_plot_y_axis", "Select the X axis variable",
-					numericPlotVariables, numericPlotVariables[2]
+					numericPlotVariables, numericPlotVariables[2],
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
 				)
 			),
 			column(
 				4,
 				pickerInput(
 					"scatter_plot_color_axis", "Select the color axis variable",
-					c("No color", factorPlotVariables), "No color"
+					c("No color", factorPlotVariables), "No color",
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
 				)
 			)
 		)
@@ -426,56 +444,64 @@ server = function(input, output, session) {
 				2,
 				pickerInput(
 					"control_chart_filters_family", "Family",
-					familyOptions, familyOptions, multiple = TRUE
+					familyOptions, familyOptions, multiple = TRUE,
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
 				)
 			),
 			column(
 				2,
 				pickerInput(
 					"control_chart_filters_cust", "Customer",
-					custOptions, custOptions, multiple = TRUE
+					custOptions, custOptions, multiple = TRUE,
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
 				)
 			),
 			column(
 				2,
 				pickerInput(
 					"control_chart_filters_model", "Model",
-					modelOptions, modelOptions, multiple = TRUE
+					modelOptions, modelOptions, multiple = TRUE,
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
 				)
 			),
 			column(
 				2,
 				pickerInput(
 					"control_chart_filters_result", "Result",
-					resultOptions, resultOptions, multiple = TRUE
+					resultOptions, resultOptions, multiple = TRUE,
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
 				)
 			),
 			column(
 				4,
 				pickerInput(
 					"control_chart_filters_shift", "Shift",
-					shiftNames, shiftNames, multiple = TRUE
+					shiftNames, shiftNames, multiple = TRUE,
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
 				)
 			),
 			column(
 				4,
 				pickerInput(
 					"control_chart_filters_machine", "Machine",
-					machinesList, machinesList, multiple = TRUE
+					machinesList, machinesList, multiple = TRUE,
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
 				)
 			),
 			column(
 				4,
 				pickerInput(
 					"control_chart_filters_operator", "Operator",
-					operatorOptions, operatorOptions, multiple = TRUE
+					operatorOptions, operatorOptions, multiple = TRUE,
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
 				)
 			),
 			column(
 				4, offset = 1,
 				pickerInput(
 					"control_chart_column", "Select the plot variable",
-					plotVariables, plotVariables[20]
+					plotVariables, plotVariables[20],
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
 				)
 			),
 			column(3, numericInput("control_chart_lsl", "Enter the LSL", value = 0)),
@@ -496,7 +522,7 @@ server = function(input, output, session) {
 				shift %in% input$control_chart_filters_shift & Opr %in% input$control_chart_filters_operator
 			)
 		if (nrow(plotData) == 0) {
-			output$control_chart_plot <- renderPlot(textPlot())
+			output$control_chart_plot_xbar_one <- renderPlot(textPlot())
 			return(NULL)
 		}
 		plot_variable <- plotData[[input$control_chart_column]]
@@ -532,28 +558,32 @@ server = function(input, output, session) {
 				2,
 				pickerInput(
 					"stratification_filters_family", "Family",
-					familyOptions, familyOptions, multiple = TRUE
+					familyOptions, familyOptions, multiple = TRUE,
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
 				)
 			),
 			column(
 				2,
 				pickerInput(
 					"stratification_filters_cust", "Customer",
-					custOptions, custOptions, multiple = TRUE
+					custOptions, custOptions, multiple = TRUE,
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
 				)
 			),
 			column(
 				2,
 				pickerInput(
 					"stratification_filters_model", "Model",
-					modelOptions, modelOptions, multiple = TRUE
+					modelOptions, modelOptions, multiple = TRUE,
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
 				)
 			),
 			column(
 				2,
 				pickerInput(
 					"stratification_filters_operator", "Operator",
-					operatorOptions, operatorOptions, multiple = TRUE
+					operatorOptions, operatorOptions, multiple = TRUE,
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
 				)
 			)
 		)
@@ -572,13 +602,118 @@ server = function(input, output, session) {
 		unformattedData <- filterData %>% group_by(Family, Cust, shift) %>%
 			summarise(passCount = sum(hasPassed), failCount = n() - passCount) %>%
 			ungroup() %>% select(Family, Cust, shift, passCount, failCount)
-		shiftOneData <- constFields %>% left_join(unformattedData %>%
-			filter(shift == shiftNames[1])) %>% select(Family, Customer = Cust, Pass = passCount, Fail = failCount) %>%
-			arrange(Family, Customer)
-		shiftTwoData <- constFields %>% left_join(unformattedData %>%
-			filter(shift == shiftNames[2])) %>% arrange(Family, Cust) %>% select(Pass = passCount, Fail = failCount)
-		shiftThreeData <- constFields %>% left_join(unformattedData %>%
-			filter(shift == shiftNames[3])) %>% arrange(Family, Cust) %>% select(Pass = passCount, Fail = failCount)
+		filterData$DayOfWeek <- weekdays(filterData$Date)
+		passCountData <- filterData %>% group_by(Family, Cust, shift, Model, Opr, DayOfWeek) %>%
+			summarise(passCount = sum(hasPassed), failCount = n() - passCount) %>%
+			ungroup() %>% select(Family, Cust, shift, passCount, Model, Opr, DayOfWeek, failCount)
+		shiftPlotData <- passCountData %>% group_by(shift) %>%
+			summarise(pass_percentage = round(sum(passCount) / (sum(passCount) + sum(failCount)) * 100, 1))
+		familyPlotData <- passCountData %>% group_by(Family) %>%
+			summarise(pass_percentage = round(sum(passCount) / (sum(passCount) + sum(failCount)) * 100, 1))
+		customerPlotData <- passCountData %>% group_by(Cust) %>%
+			summarise(pass_percentage = round(sum(passCount) / (sum(passCount) + sum(failCount)) * 100, 1))
+		modelPlotData <- passCountData %>% group_by(Model) %>%
+			summarise(pass_percentage = round(sum(passCount) / (sum(passCount) + sum(failCount)) * 100, 1))
+		operatorPlotData <- passCountData %>% group_by(Opr) %>%
+			summarise(pass_percentage = round(sum(passCount) / (sum(passCount) + sum(failCount)) * 100, 1))
+		dayOfWeekPlotData <- passCountData %>% group_by(DayOfWeek) %>%
+			summarise(pass_percentage = round(sum(passCount) / (sum(passCount) + sum(failCount)) * 100, 1))
+		output$stratification_shift <- renderPlotly({
+			if (nrow(shiftPlotData) == 0) return(ggplotly(textPlot()))
+			plot_ly(
+				data = shiftPlotData,
+				x = ~pass_percentage,
+				y = reorder(shiftPlotData$shift, shiftPlotData$pass_percentage),
+				type = "bar", orientation = 'h',
+				hovertemplate = paste(
+	                "<i>%{y}'s Pass percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
+	            )
+			) %>% layout(
+				title = "% of Pass across different Shifts",
+				xaxis = list(visible = FALSE)
+			) %>% config(displayModeBar = FALSE)
+		})
+		output$stratification_family <- renderPlotly({
+			if (nrow(familyPlotData) == 0) return(ggplotly(textPlot()))
+			plot_ly(
+				data = familyPlotData,
+				x = ~pass_percentage,
+				y = reorder(familyPlotData$Family, familyPlotData$pass_percentage),
+				type = "bar", orientation = 'h',
+				hovertemplate = paste(
+	                "<i>%{y}'s Pass percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
+	            )
+			) %>% layout(
+				title = "% of Pass across different Families",
+				xaxis = list(visible = FALSE)
+			) %>% config(displayModeBar = FALSE)
+		})
+		output$stratification_customer <- renderPlotly({
+			if (nrow(customerPlotData) == 0) return(ggplotly(textPlot()))
+			plot_ly(
+				data = customerPlotData,
+				x = ~pass_percentage,
+				y = reorder(customerPlotData$Cust, customerPlotData$pass_percentage),
+				type = "bar", orientation = 'h',
+				hovertemplate = paste(
+	                "<i>%{y}'s Pass percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
+	            )
+			) %>% layout(
+				title = "% of Pass across different Customers",
+				xaxis = list(visible = FALSE)
+			) %>% config(displayModeBar = FALSE)
+		})
+		output$stratification_model <- renderPlotly({
+			if (nrow(modelPlotData) == 0) return(ggplotly(textPlot()))
+			plot_ly(
+				data = modelPlotData,
+				x = ~pass_percentage,
+				y = reorder(modelPlotData$Model, modelPlotData$pass_percentage),
+				type = "bar", orientation = 'h',
+				hovertemplate = paste(
+	                "<i>%{y}'s Pass percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
+	            )
+			) %>% layout(
+				title = "% of Pass across different Models",
+				xaxis = list(visible = FALSE)
+			) %>% config(displayModeBar = FALSE)
+		})
+		output$stratification_operator <- renderPlotly({
+			if (nrow(operatorPlotData) == 0) return(ggplotly(textPlot()))
+			plot_ly(
+				data = operatorPlotData,
+				x = ~pass_percentage,
+				y = reorder(operatorPlotData$Opr, operatorPlotData$pass_percentage),
+				type = "bar", orientation = 'h',
+				hovertemplate = paste(
+	                "<i>%{y}'s Pass percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
+	            )
+			) %>% layout(
+				title = "% of Pass across different Operators",
+				xaxis = list(visible = FALSE)
+			) %>% config(displayModeBar = FALSE)
+		})
+		output$stratification_day_of_week <- renderPlotly({
+			if (nrow(dayOfWeekPlotData) == 0) return(ggplotly(textPlot()))
+			plot_ly(
+				data = dayOfWeekPlotData,
+				x = ~pass_percentage,
+				y = reorder(dayOfWeekPlotData$DayOfWeek, dayOfWeekPlotData$pass_percentage),
+				type = "bar", orientation = 'h',
+				hovertemplate = paste(
+	                "<i>%{y}'s Pass percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
+	            )
+			) %>% layout(
+				title = "% of Pass across different days of,
+				xaxis = list(visible = FALSE)
+			 the week") %>% config(displayModeBar = FALSE)
+		})
+		shiftOneData <- constFields %>% left_join(unformattedData %>% filter(shift == shiftNames[1]), by = c("Family", "Cust")) %>%
+			select(Family, Customer = Cust, Pass = passCount, Fail = failCount) %>% arrange(Family, Customer)
+		shiftTwoData <- constFields %>% left_join(unformattedData %>% filter(shift == shiftNames[2]), by = c("Family", "Cust")) %>%
+			arrange(Family, Cust) %>% select(Pass = passCount, Fail = failCount)
+		shiftThreeData <- constFields %>% left_join(unformattedData %>% filter(shift == shiftNames[3]), by = c("Family", "Cust")) %>%
+			arrange(Family, Cust) %>% select(Pass = passCount, Fail = failCount)
 		tableData <- cbind(shiftOneData, shiftTwoData, shiftThreeData)
 		kable(tableData, "html") %>%
 			kable_styling("striped", full_width = F) %>%
