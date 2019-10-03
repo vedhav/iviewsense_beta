@@ -38,6 +38,33 @@ evaluateFailPass <- function(passFail) {
 	return(returnBool)
 }
 
+formatData <- function(data) {
+    if ("id" %in% names(data)) {
+        idData <- data$id
+        data$id <- NULL
+    } else {
+        idData <- c(1:nrow(data))
+    }
+    if ("Machine" %in% names(data)) {
+        machineData <- data$Machine
+        data$Machine <- NULL
+    } else {
+        machineData <- "No Machine Name was specified!"
+    }
+    idAndMachineData <- data.frame(
+        id = idData,
+        Machine = machineData
+    )
+    data <- cbind(idAndMachineData, data)
+    data[, 11:51] <- sapply(data[, 11:51], as.numeric)
+    # data[is.na(data)] <- "NA"
+    data$Opr[is.na(data$Opr)] <- "NA"
+    data$Date_Time <- as.POSIXct(data$Date_Time)
+    data$shift <- getShifts(data$Date_Time)
+    data$Date <- as.Date(data$Date_Time)
+    return(data)
+}
+
 killDbxConnections <- function () {
     all_cons <- dbListConnections(dbDriver("PostgreSQL"))
     for(con in all_cons)

@@ -107,12 +107,9 @@ ui = tags$div(
 
 server = function(input, output, session) {
 	# mainData <- read_xlsx("Geartek.xlsx", sheet = 1, col_names = TRUE)
-	# mainData$Machine <- "Geartek"
-	# mainData$shift <- getShifts(mainData$DateTime)
-	# mainData[is.na(mainData)] <- "NA"
-	# mainData$Date <- as.Date(mainData$DateTime)
-	# minDate <- as.Date(min(mainData$DateTime))
-	# maxDate <- as.Date(max(mainData$DateTime))
+	# mainData <- formatData(mainData)
+	# minDate <- as.Date(min(mainData$Date_Time))
+	# maxDate <- as.Date(max(mainData$Date_Time))
 	# familyOptions <- unique(mainData$Family)
 	# custOptions <- unique(mainData$Cust)
 	# modelOptions <- unique(mainData$Model)
@@ -133,13 +130,24 @@ server = function(input, output, session) {
 					),
 					column(
 						12, HTML(
-							"Make sure that the uploaded file has the columns with these names<br>
-							<b>'Family', 'Cust', 'Model' and 'Result'</b>"
+							paste0(
+								"Make sure that the uploaded file has the columns with these names<br>
+								<b>", dataColumnNamesString, "</b>"
+							)
 						)
 					)
 				)
 			} else {
 				ui <- HTML("The data from PostgreSQL will be used for analysis!")
+				mainData <<- selectDbQuery("SELECT * FROM testresults") %>% formatData()
+				minDate <<- as.Date(min(mainData$Date_Time))
+				maxDate <<- as.Date(max(mainData$Date_Time))
+				familyOptions <<- unique(mainData$Family)
+				custOptions <<- unique(mainData$Cust)
+				modelOptions <<- unique(mainData$Model)
+				resultOptions <<- unique(mainData$Result)
+				operatorOptions <<- unique(mainData$Opr)
+				plots__trigger$trigger()
 			}
 			return(ui)
 		})
@@ -154,12 +162,9 @@ server = function(input, output, session) {
 			popUpWindow("This is an invalid file format, please upload a .xlsx or .csv file")
 			return()
 		}
-		mainData$Machine <<- "Geartek"
-		mainData$shift <<- getShifts(mainData$DateTime)
-		mainData[is.na(mainData)] <<- "NA"
-		mainData$Date <<- as.Date(mainData$DateTime)
-		minDate <<- as.Date(min(mainData$DateTime))
-		maxDate <<- as.Date(max(mainData$DateTime))
+		mainData <<- formatData(mainData)
+		minDate <<- as.Date(min(mainData$Date_Time))
+		maxDate <<- as.Date(max(mainData$Date_Time))
 		familyOptions <<- unique(mainData$Family)
 		custOptions <<- unique(mainData$Cust)
 		modelOptions <<- unique(mainData$Model)
@@ -170,7 +175,7 @@ server = function(input, output, session) {
 
 	output$histogram_filters <- renderUI({
 		plots__trigger$depend()
-		plotVariables <- names(select_if(mainData, is.numeric))
+		plotVariables <- names(mainData)[11:51]
 		fluidRow(
 			column(
 				2,
@@ -246,7 +251,7 @@ server = function(input, output, session) {
 				4, offset = 1,
 				pickerInput(
 					"histogram_column", "Select the plot variable",
-					plotVariables, plotVariables[20],
+					plotVariables, "CW_1",
 					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
 				)
 			),
@@ -279,15 +284,20 @@ server = function(input, output, session) {
 		updateNumericInput(session, "histogram_usl", value = round(uslValue, 2))
 		output$histogram_plot <- renderPlot({
 			plots__trigger$depend()
-			process.capability(
-				qcc(
-					plot_variable,
-					type = "xbar.one",
-					nsigmas = 3,
-					plot = FALSE
-				),
-				spec.limits = c(input$histogram_lsl, input$histogram_usl)
-			)
+			returnPlot <- tryCatch({
+				process.capability(
+					qcc(
+						plot_variable,
+						type = "xbar.one",
+						nsigmas = 3,
+						plot = FALSE
+					),
+					spec.limits = c(input$histogram_lsl, input$histogram_usl)
+				)
+			}, error = function(err) {
+				returnPlot <- textPlot(paste0("There is no proper data for ", input$histogram_column))
+			})
+			return(returnPlot)
 		})
 	})
 
@@ -370,7 +380,7 @@ server = function(input, output, session) {
 				4,
 				pickerInput(
 					"scatter_plot_x_axis", "Select the X axis variable",
-					numericPlotVariables, numericPlotVariables[1],
+					numericPlotVariables, "CW_1",
 					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
 				)
 			),
@@ -378,7 +388,7 @@ server = function(input, output, session) {
 				4,
 				pickerInput(
 					"scatter_plot_y_axis", "Select the X axis variable",
-					numericPlotVariables, numericPlotVariables[2],
+					numericPlotVariables, "CCW_1",
 					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
 				)
 			),
@@ -426,7 +436,7 @@ server = function(input, output, session) {
 		custOptions <- unique(mainData$Cust)
 		modelOptions <- unique(mainData$Model)
 		resultOptions <- unique(mainData$Result)
-		plotVariables <- names(select_if(mainData, is.numeric))
+		plotVariables <- names(mainData)[11:51]
 		fluidRow(
 			column(
 				2,
@@ -502,7 +512,7 @@ server = function(input, output, session) {
 				4, offset = 1,
 				pickerInput(
 					"control_chart_column", "Select the plot variable",
-					plotVariables, plotVariables[20],
+					plotVariables, "CW_1",
 					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
 				)
 			),
@@ -535,7 +545,15 @@ server = function(input, output, session) {
 		updateNumericInput(session, "control_chart_usl", value = round(uslValue, 2))
 		output$control_chart_plot_xbar_one <- renderPlot({
 			plots__trigger$depend()
-			qcc(data = plot_variable, type = "xbar.one", limits = c(input$control_chart_lsl, input$control_chart_usl))
+			returnPlot <- tryCatch({
+				qcc(
+					data = plot_variable, type = "xbar.one",
+					limits = c(input$control_chart_lsl, input$control_chart_usl)
+				)
+			}, error = function(err) {
+				returnPlot <- textPlot(paste0("There is no proper data for ", input$control_chart_column))
+			})
+			return(returnPlot)
 		})
 	})
 	output$stratification_filters <- renderUI({
@@ -706,9 +724,8 @@ server = function(input, output, session) {
 	                "<i>%{y}'s Pass percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
 	            )
 			) %>% layout(
-				title = "% of Pass across different days of,
-				xaxis = list(visible = FALSE)
-			 the week") %>% config(displayModeBar = FALSE)
+				title = "% of Pass across different days of the week"
+			) %>% config(displayModeBar = FALSE)
 		})
 		shiftOneData <- constFields %>% left_join(unformattedData %>% filter(shift == shiftNames[1]), by = c("Family", "Cust")) %>%
 			select(Family, Customer = Cust, Pass = passCount, Fail = failCount) %>% arrange(Family, Customer)
