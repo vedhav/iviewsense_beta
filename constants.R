@@ -30,3 +30,20 @@ custOptions <- NULL
 modelOptions <- NULL
 resultOptions <- NULL
 operatorOptions <- NULL
+
+
+# Database related constants
+
+#local
+# hostUserName <<- 'postgres'
+# hostPassword <<- 'admin@123'
+# hostIP <<- '127.0.0.1'
+# dbPort <<- 5432
+# dbName <<- 'rane'
+
+#live
+hostUserName <<- 'postgres'
+hostPassword <<- 'postgres'
+hostIP <<- '127.0.0.1'
+dbPort <<- 5432
+dbName <<- '7QcT'

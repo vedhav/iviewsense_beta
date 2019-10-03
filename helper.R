@@ -37,3 +37,189 @@ evaluateFailPass <- function(passFail) {
 	returnBool[passFail == failName] <- FALSE
 	return(returnBool)
 }
+
+killDbxConnections <- function () {
+    all_cons <- dbListConnections(dbDriver("PostgreSQL"))
+    for(con in all_cons)
+        dbxDisconnect(con)
+    print(paste(length(all_cons), " connections killed."))
+}
+
+#pass in the tablename along with a dataframe of values(can contain multiple rows)
+insert <- function(tableName, values) {
+    #adding support for '\' - extending dbx
+    for(field in 1:length(values))
+    {
+        if(typeof(values[[field]]) == 'character')
+        {
+            values[[field]] <- gsub("[\\]", "\\\\\\\\", values[[field]])
+        }
+    }
+    conn <- tryCatch({
+        dbxConnect(
+            adapter = "postgres",
+            user = hostUserName,
+            password = hostPassword,
+            host = hostIP,
+            port = dbPort,
+            dbname = dbName
+        )
+    }, error = function(err) {
+        killDbxConnections()
+        dbxConnect(
+            adapter = "postgres",
+            user = hostUserName,
+            password = hostPassword,
+            host = hostIP,
+            port = dbPort,
+            dbname = dbName
+        )
+    })
+    result <- suppressWarnings(dbxInsert(conn, tableName, values, batch_size = 1000))
+    on.exit(dbxDisconnect(conn))
+    return(result)
+}
+
+execute <- function(query, params = NULL) {
+    conn <- tryCatch({
+        dbxConnect(
+            adapter = "postgres",
+            user = hostUserName,
+            password = hostPassword,
+            host = hostIP,
+            port = dbPort,
+            dbname = dbName
+        )
+    }, error = function(err) {
+        killDbxConnections()
+        dbxConnect(
+            adapter = "postgres",
+            user = hostUserName,
+            password = hostPassword,
+            host = hostIP,
+            port = dbPort,
+            dbname = dbName
+        )
+    })
+    dbxExecute(conn, query, params = params)
+    on.exit(dbxDisconnect(conn))
+}
+
+#pass in the query with ? as placeholders(if needed) and params as a list
+selectDbQuery <- function(query, params = NULL) {
+    conn <- tryCatch({
+        dbxConnect(
+            adapter = "postgres",
+            user = hostUserName,
+            password = hostPassword,
+            host = hostIP,
+            port = dbPort,
+            dbname = dbName
+        )
+    }, error = function(err) {
+        killDbxConnections()
+        dbxConnect(
+            adapter = "postgres",
+            user = hostUserName,
+            password = hostPassword,
+            host = hostIP,
+            port = dbPort,
+            dbname = dbName
+        )
+    })
+    result <- NULL
+    if(!is.null(params))
+    {
+        #adding support for '\' - extending dbx
+        for(field in 1:length(params))
+        {
+            if(typeof(params[[field]]) == 'character')
+            {
+                params[[field]] <- gsub("[\\]", "\\\\\\\\", params[[field]])
+            }
+        }
+        result <- suppressWarnings(dbxSelect(conn, query, params))
+    }
+    else
+    {
+        result <- suppressWarnings(dbxSelect(conn, query))
+    }
+    on.exit(dbxDisconnect(conn))
+    return(result)
+}
+
+#pass in the tablename along with a dataframe of values(can contain multiple rows)
+delete <- function(tableName, values) {
+    conn <- tryCatch({
+        dbxConnect(
+            adapter = "postgres",
+            user = hostUserName,
+            password = hostPassword,
+            host = hostIP,
+            port = dbPort,
+            dbname = dbName
+        )
+    }, error = function(err) {
+        killDbxConnections()
+        dbxConnect(
+            adapter = "postgres",
+            user = hostUserName,
+            password = hostPassword,
+            host = hostIP,
+            port = dbPort,
+            dbname = dbName
+        )
+    })
+    result <- suppressWarnings(dbxDelete(conn, tableName, where = values))
+    on.exit(dbxDisconnect(conn))
+    return(result)
+}
+
+#pass in the tablename along with a dataframe of values(can contain multiple rows)
+upsert <- function(tableName, values, where_cols = 'id') {
+    query <- "select column_name from INFORMATION_SCHEMA.COLUMNS where TABLE_NAME = ? and TABLE_SCHEMA = ?"
+    params <- list(tableName, dbName)
+    schema <- selectDbQuery(query, params)
+    if("updated_at" %in% schema$column_name)
+    {
+        Sys.setenv(TZ='GMT')
+        updated_at <- suppressWarnings(Sys.time())
+        if("updated_at" %in% colnames(values)){
+            values["updated_at"] <- updated_at
+        }
+        else{
+            values <- cbind(values, data.frame("updated_at" = updated_at))
+        }
+    }
+    #adding support for '\' - extending dbx
+    for(field in 1:length(values))
+    {
+        if(typeof(values[[field]]) == 'character')
+        {
+            values[[field]] <- gsub("[\\]", "\\\\\\\\", values[[field]])
+        }
+    }
+    conn <- tryCatch({
+        dbxConnect(
+            adapter = "postgres",
+            user = hostUserName,
+            password = hostPassword,
+            host = hostIP,
+            port = dbPort,
+            dbname = dbName
+        )
+    }, error = function(err) {
+        killDbxConnections()
+        dbxConnect(
+            adapter = "postgres",
+            user = hostUserName,
+            password = hostPassword,
+            host = hostIP,
+            port = dbPort,
+            dbname = dbName
+        )
+    })
+    result <- suppressWarnings(dbxUpsert(conn, tableName, values, where_cols))
+    on.exit(dbxDisconnect(conn))
+    return(result)
+}

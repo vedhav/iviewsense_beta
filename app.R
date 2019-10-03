@@ -107,6 +107,7 @@ ui = tags$div(
 
 server = function(input, output, session) {
 	# mainData <- read_xlsx("Geartek.xlsx", sheet = 1, col_names = TRUE)
+	# mainData$Machine <- "Geartek"
 	# mainData$shift <- getShifts(mainData$DateTime)
 	# mainData[is.na(mainData)] <- "NA"
 	# mainData$Date <- as.Date(mainData$DateTime)
@@ -153,6 +154,7 @@ server = function(input, output, session) {
 			popUpWindow("This is an invalid file format, please upload a .xlsx or .csv file")
 			return()
 		}
+		mainData$Machine <<- "Geartek"
 		mainData$shift <<- getShifts(mainData$DateTime)
 		mainData[is.na(mainData)] <<- "NA"
 		mainData$Date <<- as.Date(mainData$DateTime)
