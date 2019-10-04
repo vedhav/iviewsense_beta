@@ -77,11 +77,11 @@ formatData <- function(data) {
 }
 
 updateDefectInDB <- function(id, defect_cat) {
+    # print(paste0("UPDATE testresults SET Defects_Category = ", defect_cat, " WHERE id = ", id))
     execute(
         "UPDATE testresults SET Defects_Category = ? WHERE id = ?",
         list(defect_cat, id)
     )
-    print("Defect has been updated!")
 }
 
 killDbxConnections <- function () {

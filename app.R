@@ -908,6 +908,8 @@ server = function(input, output, session) {
 				if (hasDbConnection) updateDefectInDB(id = row_id, defect_cat = info$value)
 				checkSheetFilterData$Defects_Category[checkSheetFilterData$id == row_id] <<- info$value
 				checkSheetFilterDataDisplay[info$row, "Defects Category"] <<- info$value
+				mainData[mainData$id == row_id, "Defects_Category"] <<- info$value
+				plotData <- mainData %>% filter(Defects_Category %in% defectsCategories)
 				pareto__trigger$trigger()
 				replaceData(tableOutputProxy, checkSheetFilterDataDisplay, resetPaging = FALSE, rownames = FALSE)
 			} else {
@@ -939,9 +941,7 @@ server = function(input, output, session) {
 	output$pareto_plot <- renderPlot({
 		plots__trigger$depend()
 		pareto__trigger$depend()
-		checkSheetData <- mainData %>% filter(Defects_Category %in% defectsCategories)
-		if (nrow(checkSheetData) == 0) return(textPlot())
-		plotData <- checkSheetData %>% filter(Defects_Category %in% defectsCategories)
+		plotData <- mainData %>% filter(Defects_Category %in% defectsCategories)
 		if (nrow(plotData) == 0) return(textPlot("Please add Defects from the Stratification tab to get the Pareto chart"))
 		plotData$Defects_Qty <- as.numeric(plotData$Defects_Qty)
 		plotData <- plotData %>% group_by(Defects_Category) %>% summarise(count_defects = sum(Defects_Qty)) %>% ungroup()
