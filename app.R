@@ -588,15 +588,16 @@ server = function(input, output, session) {
 		}
 		plot_variable <- plotData[[input$control_chart_column]]
 		plot_variable <- plot_variable[!is.na(plot_variable)]
-		lslValue <- round(mean(plot_variable) - 3 * sd(plot_variable), 2)
-		uslValue <- round(mean(plot_variable) + 3 * sd(plot_variable), 2)
+		outPlot <- qcc(data = plot_variable, type = "xbar.one", plot = FALSE)
+		lslValue <- round(outPlot$limits[1], 2)
+		uslValue <- round(outPlot$limits[2], 2)
 		updateNumericInput(
 			session, "control_chart_lcl", value = lslValue,
 			label = HTML(paste0("Enter the LCL (mean - 3 x sd = ", lslValue, ")"))
 		)
 		updateNumericInput(
 			session, "control_chart_ucl", value = uslValue,
-			label = HTML(paste0("Enter the LCL (mean + 3 x sd = ", uslValue, ")"))
+			label = HTML(paste0("Enter the UCL (mean + 3 x sd = ", uslValue, ")"))
 		)
 		output$control_chart_plot_xbar_one <- renderPlot({
 			plots__trigger$depend()
@@ -610,12 +611,24 @@ server = function(input, output, session) {
 			})
 			return(returnPlot)
 		})
+		matrixData <- matrix(cbind(plot_variable[1:length(plot_variable) - 1], plot_variable[2:length(plot_variable)]), ncol = 2)
+		outPlot <- qcc(data = matrixData, type = "R", plot = FALSE)
+		lslValue <- round(outPlot$limits[1], 2)
+		uslValue <- round(outPlot$limits[2], 2)
+		updateNumericInput(
+			session, "control_chart_r_lcl", value = lslValue,
+			label = HTML(paste0("Enter the LCL (mean - 3 x sd = ", lslValue, ")"))
+		)
+		updateNumericInput(
+			session, "control_chart_r_ucl", value = uslValue,
+			label = HTML(paste0("Enter the UCL (mean + 3 x sd = ", uslValue, ")"))
+		)
 		output$control_chart_plot_xbar_r <- renderPlot({
 			plots__trigger$depend()
-			matrixData <- matrix(cbind(plot_variable[1:length(plot_variable) - 1], plot_variable[2:length(plot_variable)]), ncol = 2)
 			returnPlot <- tryCatch({
 				qcc(
-					data = matrixData, type = "R"
+					data = matrixData, type = "R",
+					limits = c(input$control_chart_r_lcl, input$control_chart_r_ucl)
 				)
 			}, error = function(err) {
 				returnPlot <- textPlot(paste0("There is no proper data for ", input$control_chart_column))
