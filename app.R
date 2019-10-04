@@ -281,10 +281,16 @@ server = function(input, output, session) {
 		}
 		plot_variable <- plotData[[input$histogram_column]]
 		plot_variable <- plot_variable[!is.na(plot_variable)]
-		lslValue <- mean(plot_variable) - 3 * sd(plot_variable)
-		uslValue <- mean(plot_variable) + 3 * sd(plot_variable)
-		updateNumericInput(session, "histogram_lsl", value = round(lslValue, 2))
-		updateNumericInput(session, "histogram_usl", value = round(uslValue, 2))
+		lslValue <- round(mean(plot_variable) - 3 * sd(plot_variable), 2)
+		uslValue <- round(mean(plot_variable) + 3 * sd(plot_variable), 2)
+		updateNumericInput(
+			session, "histogram_lsl", value = lslValue,
+			label = HTML(paste0("Enter the LCL (mean - 3 x sd = ", lslValue, ")"))
+		)
+		updateNumericInput(
+			session, "histogram_usl", value = uslValue,
+			label = HTML(paste0("Enter the LCL (mean + 3 x sd = ", uslValue, ")"))
+		)
 		output$histogram_plot <- renderPlot({
 			plots__trigger$depend()
 			returnPlot <- tryCatch({
@@ -407,6 +413,15 @@ server = function(input, output, session) {
 	})
 	output$scatter_plot <- renderPlotly({
 		plots__trigger$depend()
+		req(input$scatter_plot_filters_family)
+		req(input$scatter_plot_filters_cust)
+		req(input$scatter_plot_filters_model)
+		req(input$scatter_plot_filters_result)
+		req(input$scatter_plot_filters_date_from)
+		req(input$scatter_plot_filters_date_to)
+		req(input$scatter_plot_filters_shift)
+		req(input$scatter_plot_filters_operator)
+		req(input$scatter_plot_filters_machine)
 		plotData <- mainData %>%
 			filter(
 				Family %in% input$scatter_plot_filters_family & Cust %in% input$scatter_plot_filters_cust &
@@ -520,8 +535,8 @@ server = function(input, output, session) {
 					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
 				)
 			),
-			column(3, numericInput("control_chart_lsl", "Enter the LSL", value = 0)),
-			column(3, numericInput("control_chart_usl", "Enter the USL", value = 0))
+			column(3, numericInput("control_chart_lcl", "Enter the LCL", value = 0)),
+			column(3, numericInput("control_chart_ucl", "Enter the UCL", value = 0))
 		)
 	})
 	observeEvent(c(
@@ -544,16 +559,22 @@ server = function(input, output, session) {
 		}
 		plot_variable <- plotData[[input$control_chart_column]]
 		plot_variable <- plot_variable[!is.na(plot_variable)]
-		lslValue <- mean(plot_variable) - 3 * sd(plot_variable)
-		uslValue <- mean(plot_variable) + 3 * sd(plot_variable)
-		updateNumericInput(session, "control_chart_lsl", value = round(lslValue, 2))
-		updateNumericInput(session, "control_chart_usl", value = round(uslValue, 2))
+		lslValue <- round(mean(plot_variable) - 3 * sd(plot_variable), 2)
+		uslValue <- round(mean(plot_variable) + 3 * sd(plot_variable), 2)
+		updateNumericInput(
+			session, "control_chart_lcl", value = lslValue,
+			label = HTML(paste0("Enter the LCL (mean - 3 x sd = ", lslValue, ")"))
+		)
+		updateNumericInput(
+			session, "control_chart_ucl", value = uslValue,
+			label = HTML(paste0("Enter the LCL (mean + 3 x sd = ", uslValue, ")"))
+		)
 		output$control_chart_plot_xbar_one <- renderPlot({
 			plots__trigger$depend()
 			returnPlot <- tryCatch({
 				qcc(
 					data = plot_variable, type = "xbar.one",
-					limits = c(input$control_chart_lsl, input$control_chart_usl)
+					limits = c(input$control_chart_lcl, input$control_chart_ucl)
 				)
 			}, error = function(err) {
 				returnPlot <- textPlot(paste0("There is no proper data for ", input$control_chart_column))
@@ -615,6 +636,12 @@ server = function(input, output, session) {
 	})
 	output$stratification_table <- function() {
 		plots__trigger$depend()
+		req(input$stratification_filters_date_from)
+		req(input$stratification_filters_date_to)
+		req(input$stratification_filters_family)
+		req(input$stratification_filters_cust)
+		req(input$stratification_filters_model)
+		req(input$stratification_filters_operator)
 		if (nrow(mainData) == 0) return(data.frame())
 		filterData <- mainData %>%
 			filter(
