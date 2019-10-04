@@ -430,20 +430,47 @@ server = function(input, output, session) {
 				shift %in% input$scatter_plot_filters_shift & Opr %in% input$scatter_plot_filters_operator &
 				Machine %in% input$scatter_plot_filters_machine
 			)
-		if (nrow(plotData) == 0) {
-			return(ggplotly(textPlot()))
-		}
+		if (nrow(plotData) == 0) return(ggplotly(textPlot()))
 		if (input$scatter_plot_color_axis == "No color") {
+			xyPlotData <- plotData %>% select(one_of(input$scatter_plot_x_axis, input$scatter_plot_y_axis))
+			xyPlotData <- xyPlotData[complete.cases(xyPlotData), ]
+			if (nrow(xyPlotData) == 0) return(ggplotly(textPlot()))
+			xVariable <- xyPlotData[[input$scatter_plot_x_axis]]
+			yVariable <- xyPlotData[[input$scatter_plot_y_axis]]
 			plot <- plot_ly(
-				data = plotData, x = plotData[[input$scatter_plot_x_axis]],
-				y = plotData[[input$scatter_plot_y_axis]],
-				type = "scatter", mode = "markers", size = 5
+				data = xyPlotData, x = xVariable,
+				y = yVariable, name = "X-Y Plot",
+				type = "scatter", mode = "markers", size = 2
+			) %>%
+			add_lines(
+				x= ~xVariable, name = "Trend",
+				y= fitted(lm(yVariable~xVariable)),
+				line = list(color = "#000000"), inherit = FALSE
+			) %>%
+			layout(
+				xaxis = list(title = input$scatter_plot_x_axis),
+				yaxis = list(title = input$scatter_plot_y_axis)
 			)
 		} else {
+			xyColorPlotData <- plotData %>% select(one_of(input$scatter_plot_x_axis, input$scatter_plot_y_axis, input$scatter_plot_color_axis))
+			xyColorPlotData <- xyColorPlotData[complete.cases(xyColorPlotData), ]
+			if (nrow(xyColorPlotData) == 0) return(ggplotly(textPlot()))
+			xVariable <- xyColorPlotData[[input$scatter_plot_x_axis]]
+			yVariable <- xyColorPlotData[[input$scatter_plot_y_axis]]
+			colorVariable <- xyColorPlotData[[input$scatter_plot_color_axis]]
 			plot <- plot_ly(
-				data = plotData, x = plotData[[input$scatter_plot_x_axis]],
-				y = plotData[[input$scatter_plot_y_axis]], color = plotData[[input$scatter_plot_color_axis]],
-				type = "scatter", mode = "markers", size = 5
+				data = xyColorPlotData, x = xVariable,
+				y = yVariable, color = colorVariable,
+				type = "scatter", mode = "markers", size = 2
+			) %>%
+			add_lines(
+				x= ~xVariable, name = "Trend",
+				y= fitted(lm(yVariable~xVariable)),
+				line = list(color = "#000000"), inherit = FALSE
+			) %>%
+			layout(
+				xaxis = list(title = input$scatter_plot_x_axis),
+				yaxis = list(title = input$scatter_plot_y_axis)
 			)
 		}
 		return(plot)
@@ -678,8 +705,8 @@ server = function(input, output, session) {
 				y = reorder(shiftPlotData$shift, shiftPlotData$pass_percentage),
 				type = "bar", orientation = 'h',
 				hovertemplate = paste(
-	                "<i>%{y}'s Pass percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
-	            )
+					"<i>%{y}'s Pass percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
+				)
 			) %>% layout(
 				title = "% of Pass across different Shifts",
 				xaxis = list(visible = FALSE)
@@ -693,8 +720,8 @@ server = function(input, output, session) {
 				y = reorder(familyPlotData$Family, familyPlotData$pass_percentage),
 				type = "bar", orientation = 'h',
 				hovertemplate = paste(
-	                "<i>%{y}'s Pass percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
-	            )
+					"<i>%{y}'s Pass percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
+				)
 			) %>% layout(
 				title = "% of Pass across different Families",
 				xaxis = list(visible = FALSE)
@@ -708,8 +735,8 @@ server = function(input, output, session) {
 				y = reorder(customerPlotData$Cust, customerPlotData$pass_percentage),
 				type = "bar", orientation = 'h',
 				hovertemplate = paste(
-	                "<i>%{y}'s Pass percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
-	            )
+					"<i>%{y}'s Pass percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
+				)
 			) %>% layout(
 				title = "% of Pass across different Customers",
 				xaxis = list(visible = FALSE)
@@ -723,8 +750,8 @@ server = function(input, output, session) {
 				y = reorder(modelPlotData$Model, modelPlotData$pass_percentage),
 				type = "bar", orientation = 'h',
 				hovertemplate = paste(
-	                "<i>%{y}'s Pass percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
-	            )
+					"<i>%{y}'s Pass percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
+				)
 			) %>% layout(
 				title = "% of Pass across different Models",
 				xaxis = list(visible = FALSE)
@@ -738,8 +765,8 @@ server = function(input, output, session) {
 				y = reorder(operatorPlotData$Opr, operatorPlotData$pass_percentage),
 				type = "bar", orientation = 'h',
 				hovertemplate = paste(
-	                "<i>%{y}'s Pass percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
-	            )
+					"<i>%{y}'s Pass percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
+				)
 			) %>% layout(
 				title = "% of Pass across different Operators",
 				xaxis = list(visible = FALSE)
@@ -753,8 +780,8 @@ server = function(input, output, session) {
 				y = reorder(dayOfWeekPlotData$DayOfWeek, dayOfWeekPlotData$pass_percentage),
 				type = "bar", orientation = 'h',
 				hovertemplate = paste(
-	                "<i>%{y}'s Pass percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
-	            )
+					"<i>%{y}'s Pass percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
+				)
 			) %>% layout(
 				title = "% of Pass across different days of the week"
 			) %>% config(displayModeBar = FALSE)
