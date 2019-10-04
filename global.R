@@ -117,7 +117,9 @@ pareto_body <- bs4TabItem(
 		fluidPage(
 			fluidRow(
 				column(12, align = "center", style = "font-size: 20px;", "Pareto"),
-				column(12, plotOutput("pareto_plot"))
+				column(12, align = "center", uiOutput("pareto_filters")),
+				column(12, plotOutput("pareto_plot")),
+				column(12, plotOutput("pareto_tables"))
 			)
 		)
 	)

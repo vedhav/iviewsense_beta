@@ -938,11 +938,72 @@ server = function(input, output, session) {
         )
 	})
 
+	output$pareto_filters <- renderUI({
+		plots__trigger$depend()
+		pareto__trigger$depend()
+		tableData <- mainData %>% filter(Defects_Category %in% defectsCategories)
+		if (nrow(tableData) == 0) return()
+		defectsList <- unique(tableData$Defects_Category)
+		familyList <- unique(tableData$Family)
+		customerList <- unique(tableData$Cust)
+		modelList <- unique(tableData$Model)
+		shiftList <- unique(tableData$shift)
+		fluidRow(
+			column(1, ""),
+			column(
+				2,
+				pickerInput(
+					"pareto_filters_defects", "Defects",
+					defectsList, defectsList, multiple = TRUE,
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
+				)
+			),
+			column(
+				2,
+				pickerInput(
+					"pareto_filters_family", "Family",
+					familyList, familyList, multiple = TRUE,
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
+				)
+			),
+			column(
+				2,
+				pickerInput(
+					"pareto_filters_customer", "Customer",
+					customerList, customerList, multiple = TRUE,
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
+				)
+			),
+			column(
+				2,
+				pickerInput(
+					"pareto_filters_model", "Model",
+					modelList, modelList, multiple = TRUE,
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
+				)
+			),
+			column(
+				2,
+				pickerInput(
+					"pareto_filters_shift", "Shift",
+					shiftList, shiftList, multiple = TRUE,
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
+				)
+			)
+		)
+	})
 	output$pareto_plot <- renderPlot({
 		plots__trigger$depend()
 		pareto__trigger$depend()
 		plotData <- mainData %>% filter(Defects_Category %in% defectsCategories)
 		if (nrow(plotData) == 0) return(textPlot("Please add Defects from the Stratification tab to get the Pareto chart"))
+		plotData <- plotData %>%
+			filter(
+				Defects_Category %in% input$pareto_filters_defects & Family %in% input$pareto_filters_family &
+				Cust %in% input$pareto_filters_customer & Model %in% input$pareto_filters_model &
+				shift %in% input$pareto_filters_shift
+			)
+		if (nrow(plotData) == 0) return(textPlot())
 		plotData$Defects_Qty <- as.numeric(plotData$Defects_Qty)
 		plotData <- plotData %>% group_by(Defects_Category) %>% summarise(count_defects = sum(Defects_Qty)) %>% ungroup()
 		defect <- plotData$count_defects
