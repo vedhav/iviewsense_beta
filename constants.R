@@ -50,17 +50,36 @@ machineOptions <- NULL
 
 
 # Database related constants
-
-#local
+# # PostgreSQL
+# # databaseDriver <<- dbDriver("PostgreSQL")
+# connectionAdapter <<- "postgres"
+# #local
 # hostUserName <<- 'postgres'
 # hostPassword <<- 'admin@123'
 # hostIP <<- '127.0.0.1'
 # dbPort <<- 5432
 # dbName <<- 'rane'
 
+# #live
+# # hostUserName <<- 'postgres'
+# # hostPassword <<- 'postgres'
+# # hostIP <<- '127.0.0.1'
+# # dbPort <<- 5432
+# # dbName <<- '7QcT'
+
+# MySQL
+connectionAdapter <<- "mysql"
+databaseDriver <<- MySQL()
+# #local
+# hostUserName <<- 'root'
+# hostPassword <<- 'admin@123'
+# hostIP <<- '127.0.0.1'
+# dbPort <<- 3306
+# dbName <<- 'rane'
+
 #live
-hostUserName <<- 'postgres'
-hostPassword <<- 'postgres'
+hostUserName <<- 'root'
+hostPassword <<- 'password'
 hostIP <<- '127.0.0.1'
-dbPort <<- 5432
+dbPort <<- 3306
 dbName <<- '7QcT'

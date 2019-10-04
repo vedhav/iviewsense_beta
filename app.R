@@ -116,7 +116,10 @@ server = function(input, output, session) {
 	# resultOptions <- unique(mainData$Result)
 	# operatorOptions <- unique(mainData$Opr)
 	# machineOptions <- unique(mainData$Machine)
+	# checkSheetData <- generateCheckSheetData(mainData)
 	mainData <- data.frame()
+	checkSheetData <- data.frame()
+	checkSheetTableData <- data.frame()
 	observeEvent(input$remote_or_local, {
 		output$data_source_body_ui <- renderUI({
 			if (input$remote_or_local %% 2 == 0) {
@@ -139,7 +142,7 @@ server = function(input, output, session) {
 					)
 				)
 			} else {
-				ui <- HTML("The data from PostgreSQL will be used for analysis!")
+				ui <- HTML("The data from MySQL database will be used for analysis!")
 				mainData <<- selectDbQuery("SELECT * FROM testresults") %>% formatData()
 				minDate <<- as.Date(min(mainData$Date_Time))
 				maxDate <<- as.Date(max(mainData$Date_Time))
@@ -149,6 +152,7 @@ server = function(input, output, session) {
 				resultOptions <<- unique(mainData$Result)
 				operatorOptions <<- unique(mainData$Opr)
 				machineOptions <<- unique(mainData$Machine)
+				checkSheetData <<- generateCheckSheetData(mainData)
 				plots__trigger$trigger()
 			}
 			return(ui)
@@ -173,6 +177,7 @@ server = function(input, output, session) {
 		resultOptions <<- unique(mainData$Result)
 		operatorOptions <<- unique(mainData$Opr)
 		machineOptions <<- unique(mainData$Machine)
+		checkSheetData <<- generateCheckSheetData(mainData)
 		plots__trigger$trigger()
 	})
 
@@ -860,6 +865,33 @@ server = function(input, output, session) {
 			kable_styling("striped", full_width = F) %>%
 			add_header_above(c(" " = 2, "Shift 1" = 2, "Shift 2" = 2, "Shift 3" = 2))
 	}
+
+	output$headerText <- renderText({
+		failData <- checkSheetData %>% filter(Result == failName)
+		paste0("Total Fails: ", nrow(failData))
+	})
+	output$check_sheet_table <- renderDT({
+		checkSheetTableData <<- checkSheetData %>% filter(Result == failName) %>% select(-c(Result))
+		datatable(
+			checkSheetTableData,
+			rownames = FALSE,
+			editable = TRUE,
+			class = "cell-border stripe",
+			options = list(
+				pageLength = 20
+			)
+		)
+	})
+	tableOutputProxy <- dataTableProxy("check_sheet_table")
+	observeEvent(input$check_sheet_table_cell_edit, {
+		info = input$check_sheet_table_cell_edit
+		print(info)
+		if (info$col %in% c(2, 3)) {
+
+		} else {
+			replaceData(tableOutputProxy, checkSheetTableData, resetPaging = FALSE, rownames = FALSE)
+		}
+	})
 }
 
 shinyApp(ui, server)

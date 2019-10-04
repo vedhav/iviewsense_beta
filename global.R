@@ -143,7 +143,8 @@ check_sheet_body <- bs4TabItem(
 		fluidPage(
 			fluidRow(
 				column(12, align = "center", style = "font-size: 20px;", "Check sheet"),
-				column(12, align = "center", "still under development!")
+				column(12, textOutput("headerText")),
+				column(12, DTOutput("check_sheet_table"))
 			)
 		)
 	)
