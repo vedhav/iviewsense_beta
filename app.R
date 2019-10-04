@@ -290,12 +290,12 @@ server = function(input, output, session) {
 		lslValue <- round(mean(plot_variable) - 3 * sd(plot_variable), 2)
 		uslValue <- round(mean(plot_variable) + 3 * sd(plot_variable), 2)
 		updateNumericInput(
-			session, "histogram_lsl", value = lslValue,
-			label = HTML(paste0("Enter the LCL (mean - 3 x sd = ", lslValue, ")"))
+			session, "histogram_lsl", value = lslValue
+			# label = HTML(paste0("Enter the LCL (mean - 3 x sd = ", lslValue, ")"))
 		)
 		updateNumericInput(
-			session, "histogram_usl", value = uslValue,
-			label = HTML(paste0("Enter the LCL (mean + 3 x sd = ", uslValue, ")"))
+			session, "histogram_usl", value = uslValue
+			# label = HTML(paste0("Enter the LCL (mean + 3 x sd = ", uslValue, ")"))
 		)
 		output$histogram_plot <- renderPlot({
 			plots__trigger$depend()
@@ -597,12 +597,12 @@ server = function(input, output, session) {
 		lslValue <- round(outPlot$limits[1], 2)
 		uslValue <- round(outPlot$limits[2], 2)
 		updateNumericInput(
-			session, "control_chart_lcl", value = lslValue,
-			label = HTML(paste0("Enter the LCL (mean - 3 x sd = ", lslValue, ")"))
+			session, "control_chart_lcl", value = lslValue
+			# label = HTML(paste0("Enter the LCL (mean - 3 x sd = ", lslValue, ")"))
 		)
 		updateNumericInput(
-			session, "control_chart_ucl", value = uslValue,
-			label = HTML(paste0("Enter the UCL (mean + 3 x sd = ", uslValue, ")"))
+			session, "control_chart_ucl", value = uslValue
+			# label = HTML(paste0("Enter the UCL (mean + 3 x sd = ", uslValue, ")"))
 		)
 		output$control_chart_plot_xbar_one <- renderPlot({
 			plots__trigger$depend()
