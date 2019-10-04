@@ -583,6 +583,7 @@ server = function(input, output, session) {
 			)
 		if (nrow(plotData) == 0) {
 			output$control_chart_plot_xbar_one <- renderPlot(textPlot())
+			output$control_chart_plot_xbar_r <- renderPlot(textPlot())
 			return(NULL)
 		}
 		plot_variable <- plotData[[input$control_chart_column]]
@@ -603,6 +604,18 @@ server = function(input, output, session) {
 				qcc(
 					data = plot_variable, type = "xbar.one",
 					limits = c(input$control_chart_lcl, input$control_chart_ucl)
+				)
+			}, error = function(err) {
+				returnPlot <- textPlot(paste0("There is no proper data for ", input$control_chart_column))
+			})
+			return(returnPlot)
+		})
+		output$control_chart_plot_xbar_r <- renderPlot({
+			plots__trigger$depend()
+			matrixData <- matrix(cbind(plot_variable[1:length(plot_variable) - 1], plot_variable[2:length(plot_variable)]), ncol = 2)
+			returnPlot <- tryCatch({
+				qcc(
+					data = matrixData, type = "R"
 				)
 			}, error = function(err) {
 				returnPlot <- textPlot(paste0("There is no proper data for ", input$control_chart_column))
