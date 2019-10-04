@@ -119,6 +119,7 @@ server = function(input, output, session) {
 	mainData <- data.frame()
 	checkSheetData <- data.frame()
 	checkSheetTableData <- data.frame()
+	hasDbConnection <- FALSE
 	observeEvent(input$remote_or_local, {
 		output$data_source_body_ui <- renderUI({
 			if (input$remote_or_local %% 2 == 0) {
@@ -152,6 +153,7 @@ server = function(input, output, session) {
 				operatorOptions <<- unique(mainData$Opr)
 				machineOptions <<- unique(mainData$Machine)
 				checkSheetData <<- getCheckSheetData()
+				hasDbConnection <<- TRUE
 				plots__trigger$trigger()
 			}
 			return(ui)
@@ -177,6 +179,7 @@ server = function(input, output, session) {
 		operatorOptions <<- unique(mainData$Opr)
 		machineOptions <<- unique(mainData$Machine)
 		checkSheetData <<- getCheckSheetDataFromFile(mainData)
+		hasDbConnection <<- FALSE
 		plots__trigger$trigger()
 	})
 
@@ -899,7 +902,7 @@ server = function(input, output, session) {
 		}
 		if (info$col == 3) {
 			row_id <- checkSheetData[info$row, "id"]
-			updateDefectInDB(id = row_id, defect_cat = info$value)
+			if (hasDbConnection) updateDefectInDB(id = row_id, defect_cat = info$value)
 			checkSheetData$defects_category[checkSheetData$id == row_id] <<- info$value
 			checkSheetTableData[info$row, "Defects Category"] <<- info$value
 			pareto__trigger$trigger()
