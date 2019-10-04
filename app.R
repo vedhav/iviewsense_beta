@@ -901,10 +901,23 @@ server = function(input, output, session) {
 			updateDefectInDB(id = row_id, defect_cat = info$value)
 			checkSheetData$defects_category[checkSheetData$id == row_id] <<- info$value
 			checkSheetTableData[info$row, "Defects Category"] <<- info$value
+			pareto__trigger$trigger()
 			replaceData(tableOutputProxy, checkSheetTableData, resetPaging = FALSE, rownames = FALSE)
 		} else {
 			replaceData(tableOutputProxy, checkSheetTableData, resetPaging = FALSE, rownames = FALSE)
 		}
+	})
+	output$pareto_plot <- renderPlot({
+		plots__trigger$depend()
+		pareto__trigger$depend()
+		if (nrow(checkSheetData) == 0) return(textPlot())
+		plotData <- checkSheetData %>% filter(defects_category %in% defectsCategories)
+		if (nrow(plotData) == 0) return(textPlot("Please enter Defects Category in the Check sheet to get the Pareto chart"))
+		plotData$defects_qty <- as.numeric(plotData$defects_qty)
+		plotData <- plotData %>% group_by(defects_category) %>% summarise(count_defects = sum(defects_qty)) %>% ungroup()
+		defect <- plotData$count_defects
+		names(defect) <- plotData$defects_category
+		pareto.chart(defect, ylab = "Error frequency")
 	})
 }
 
