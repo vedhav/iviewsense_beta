@@ -66,15 +66,31 @@ formatData <- function(data) {
     return(data)
 }
 
-generateCheckSheetData <- function(data) {
+getCheckSheetData <- function() {
+    data <- selectDbQuery("SELECT * FROM defects")
     returnData <- data.frame(
-        Date = data$Date,
+        id = data$id,
+        Machine = data$Machine,
+        Date_Time = data$Date_Time,
+        Date = as.Date(data$Date_Time),
+        Family = data$Family,
         Model = data$Model,
-        Defects_Category = "",
-        Defects_Qty = "",
-        Result = data$Result
+        Shift = getShifts(data$Date_Time),
+        Stn = data$Stn,
+        Opr = data$Opr,
+        defects_category = data$defects_category,
+        defects_qty = data$defects_qty,
+        stringsAsFactors = FALSE
     )
     return(returnData)
+}
+
+updateDefectInDB <- function(id, defect_cat) {
+    execute(
+        "UPDATE defects SET defects_category = ? WHERE id = ?",
+        list(defect_cat, id)
+    )
+    print("Defect has been updated!")
 }
 
 killDbxConnections <- function () {

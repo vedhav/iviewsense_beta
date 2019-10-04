@@ -38,6 +38,15 @@ dataColumnNamesString <<- "
 	'CCW_1', 'CW_2', 'CCW_2', 'CW_3', 'CCW_3', 'CW_4', 'CCW_4', 'CW_5', 'CCW_5',<br>
 	'CW_6', 'CCW_6', 'CW_7', 'CCW_7', 'CW_8', 'CCW_8', 'CW_9', 'CCW_9', 'CW_10', 'CCW_10'
 "
+defectsCategories <<- c(
+	"Low-cycle Fatigue", "High-Cycle Fatigue",
+	"Macropitting", "Micropitting", "Subcase Failure", "Adhesion",
+	"Abrasion", "Corrosion", "Fretting Corrosion", "Polishing",
+	"Electric Discharge", "Cavitation", "Errosion", "Scuffing",
+	"Brittle Fracture", "Ductile Fracture", "Mixed-Mode Fracture",
+	"Plastic Deformation", "Hardening Cracks", "Grinding Cracks",
+	"Rimand Web Cracks", "Case-Core Seperation"
+)
 
 minDate <<- NULL
 maxDate <<- NULL
@@ -71,15 +80,15 @@ machineOptions <- NULL
 connectionAdapter <<- "mysql"
 databaseDriver <<- MySQL()
 # #local
-# hostUserName <<- 'root'
-# hostPassword <<- 'admin@123'
-# hostIP <<- '127.0.0.1'
-# dbPort <<- 3306
-# dbName <<- 'rane'
-
-#live
 hostUserName <<- 'root'
-hostPassword <<- 'password'
+hostPassword <<- 'admin@123'
 hostIP <<- '127.0.0.1'
 dbPort <<- 3306
-dbName <<- '7QcT'
+dbName <<- 'rane'
+
+#live
+# hostUserName <<- 'root'
+# hostPassword <<- 'password'
+# hostIP <<- '127.0.0.1'
+# dbPort <<- 3306
+# dbName <<- '7QcT'

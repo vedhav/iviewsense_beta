@@ -116,7 +116,6 @@ server = function(input, output, session) {
 	# resultOptions <- unique(mainData$Result)
 	# operatorOptions <- unique(mainData$Opr)
 	# machineOptions <- unique(mainData$Machine)
-	# checkSheetData <- generateCheckSheetData(mainData)
 	mainData <- data.frame()
 	checkSheetData <- data.frame()
 	checkSheetTableData <- data.frame()
@@ -152,7 +151,7 @@ server = function(input, output, session) {
 				resultOptions <<- unique(mainData$Result)
 				operatorOptions <<- unique(mainData$Opr)
 				machineOptions <<- unique(mainData$Machine)
-				checkSheetData <<- generateCheckSheetData(mainData)
+				checkSheetData <<- getCheckSheetData()
 				plots__trigger$trigger()
 			}
 			return(ui)
@@ -177,7 +176,6 @@ server = function(input, output, session) {
 		resultOptions <<- unique(mainData$Result)
 		operatorOptions <<- unique(mainData$Opr)
 		machineOptions <<- unique(mainData$Machine)
-		checkSheetData <<- generateCheckSheetData(mainData)
 		plots__trigger$trigger()
 	})
 
@@ -867,11 +865,14 @@ server = function(input, output, session) {
 	}
 
 	output$headerText <- renderText({
-		failData <- checkSheetData %>% filter(Result == failName)
-		paste0("Total Fails: ", nrow(failData))
+		plots__trigger$depend()
+		paste0("Total Fails: ", nrow(checkSheetData))
 	})
 	output$check_sheet_table <- renderDT({
-		checkSheetTableData <<- checkSheetData %>% filter(Result == failName) %>% select(-c(Result))
+		plots__trigger$depend()
+		if (nrow(checkSheetData) == 0) return(data.frame())
+		checkSheetTableData <<- checkSheetData %>%
+			select(Date, Shift, Model, "Defects Category" = defects_category, "Defects Qty" = defects_qty)
 		datatable(
 			checkSheetTableData,
 			rownames = FALSE,
@@ -885,9 +886,22 @@ server = function(input, output, session) {
 	tableOutputProxy <- dataTableProxy("check_sheet_table")
 	observeEvent(input$check_sheet_table_cell_edit, {
 		info = input$check_sheet_table_cell_edit
-		print(info)
-		if (info$col %in% c(2, 3)) {
-
+		if (!info$value %in% defectsCategories) {
+			popUpWindow(
+				paste0(
+					"<b>Please enter the Defects category from one of these values:</b><br><br>",
+					paste(defectsCategories, collapse = ", ")
+				)
+			)
+			replaceData(tableOutputProxy, checkSheetTableData, resetPaging = FALSE, rownames = FALSE)
+			return()
+		}
+		if (info$col == 3) {
+			row_id <- checkSheetData[info$row, "id"]
+			updateDefectInDB(id = row_id, defect_cat = info$value)
+			checkSheetData$defects_category[checkSheetData$id == row_id] <<- info$value
+			checkSheetTableData[info$row, "Defects Category"] <<- info$value
+			replaceData(tableOutputProxy, checkSheetTableData, resetPaging = FALSE, rownames = FALSE)
 		} else {
 			replaceData(tableOutputProxy, checkSheetTableData, resetPaging = FALSE, rownames = FALSE)
 		}
