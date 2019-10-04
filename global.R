@@ -119,7 +119,7 @@ pareto_body <- bs4TabItem(
 				column(12, align = "center", style = "font-size: 20px;", "Pareto"),
 				column(12, align = "center", uiOutput("pareto_filters")),
 				column(12, plotOutput("pareto_plot")),
-				column(12, plotOutput("pareto_tables"))
+				column(12, DTOutput("pareto_tables"))
 			)
 		)
 	)
