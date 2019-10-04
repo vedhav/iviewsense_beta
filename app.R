@@ -73,6 +73,11 @@ ui = tags$div(
 						icon = "chart-line"
 					),
 					bs4SidebarMenuItem(
+						text = "Check sheet",
+						tabName = "check_sheet",
+						icon = "check"
+					),
+					bs4SidebarMenuItem(
 						text = "Pareto",
 						tabName = "pareto",
 						icon = "percentage"
@@ -81,11 +86,6 @@ ui = tags$div(
 						text = "Cause & effect",
 						tabName = "cause_effect",
 						icon = "balance-scale"
-					),
-					bs4SidebarMenuItem(
-						text = "Check sheet",
-						tabName = "check_sheet",
-						icon = "check"
 					)
 				)
 			),
@@ -96,9 +96,9 @@ ui = tags$div(
 					control_chart_body,
 					histogram_body,
 					scatter_plot_body,
+					check_sheet_body,
 					pareto_body,
-					cause_effect_body,
-					check_sheet_body
+					cause_effect_body
 				)
 			)
 		)
