@@ -148,6 +148,7 @@ server = function(input, output, session) {
 				modelOptions <<- unique(mainData$Model)
 				resultOptions <<- unique(mainData$Result)
 				operatorOptions <<- unique(mainData$Opr)
+				machineOptions <<- unique(mainData$Machine)
 				plots__trigger$trigger()
 			}
 			return(ui)
