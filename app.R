@@ -289,8 +289,9 @@ server = function(input, output, session) {
 		}
 		plot_variable <- plotData[[input$histogram_column]]
 		plot_variable <- plot_variable[!is.na(plot_variable)]
-		lslValue <- round(mean(plot_variable) - 3 * sd(plot_variable), 2)
-		uslValue <- round(mean(plot_variable) + 3 * sd(plot_variable), 2)
+		outPlot <- qcc(plot_variable, type = "xbar.one", plot = FALSE)
+		lslValue <- round(outPlot$limits[1], 2)
+		uslValue <- round(outPlot$limits[2], 2)
 		updateNumericInput(
 			session, "histogram_lsl", value = lslValue
 			# label = HTML(paste0("Enter the LCL (mean - 3 x sd = ", lslValue, ")"))
@@ -623,12 +624,12 @@ server = function(input, output, session) {
 		lslValue <- round(outPlot$limits[1], 2)
 		uslValue <- round(outPlot$limits[2], 2)
 		updateNumericInput(
-			session, "control_chart_r_lcl", value = lslValue,
-			label = HTML(paste0("Enter the LCL (mean - 3 x sd = ", lslValue, ")"))
+			session, "control_chart_r_lcl", value = lslValue
+			# label = HTML(paste0("Enter the LCL (mean - 3 x sd = ", lslValue, ")"))
 		)
 		updateNumericInput(
-			session, "control_chart_r_ucl", value = uslValue,
-			label = HTML(paste0("Enter the UCL (mean + 3 x sd = ", uslValue, ")"))
+			session, "control_chart_r_ucl", value = uslValue
+			# label = HTML(paste0("Enter the UCL (mean + 3 x sd = ", uslValue, ")"))
 		)
 		output$control_chart_plot_xbar_r <- renderPlot({
 			plots__trigger$depend()
