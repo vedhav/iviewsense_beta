@@ -86,6 +86,7 @@ getCheckSheetData <- function() {
 }
 
 getCheckSheetDataFromFile <- function(data) {
+    data <- data %>% filter(Result == failName)
     returnData <- data.frame(
         id = data$id,
         Machine = data$Machine,

@@ -882,8 +882,10 @@ server = function(input, output, session) {
 			rownames = FALSE,
 			editable = TRUE,
 			class = "cell-border stripe",
+			filter = "top",
 			options = list(
-				pageLength = 20
+				pageLength = 100,
+				dom = 'tip'
 			)
 		)
 	})
@@ -894,7 +896,7 @@ server = function(input, output, session) {
 			popUpWindow(
 				paste0(
 					"<b>Please enter the Defects category from one of these values:</b><br><br>",
-					paste(defectsCategories, collapse = ", ")
+					paste(defectsCategories, collapse = "<br>")
 				)
 			)
 			replaceData(tableOutputProxy, checkSheetTableData, resetPaging = FALSE, rownames = FALSE)
@@ -921,7 +923,7 @@ server = function(input, output, session) {
 		plotData <- plotData %>% group_by(defects_category) %>% summarise(count_defects = sum(defects_qty)) %>% ungroup()
 		defect <- plotData$count_defects
 		names(defect) <- plotData$defects_category
-		pareto.chart(defect, ylab = "Error frequency")
+		pareto.chart(defect, ylab = "Frequency of defects")
 	})
 }
 
