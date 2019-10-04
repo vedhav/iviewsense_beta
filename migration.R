@@ -36,3 +36,6 @@ defectsTable <- data.frame(
 )
 # execute("TRUNCATE TABLE defects")
 insert("defects", defectsTable)
+
+# Use this to add defects to testresults
+# ALTER TABLE `testresults` ADD `Defects_Category` VARCHAR(45) NOT NULL AFTER `Result`, ADD `Defects_Qty` VARCHAR(45) NOT NULL DEFAULT '1' AFTER `Defects_Category`;

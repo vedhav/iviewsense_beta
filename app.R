@@ -1,5 +1,17 @@
 source("global.R")
 
+cause_effect_body <- bs4TabItem(
+	tabName = "cause_effect",
+	tags$div(
+		fluidPage(
+			fluidRow(
+				column(12, align = "center", style = "font-size: 20px;", "Cause & effect"),
+				column(12, uiOutput("cause_effect_filters"))
+			)
+		)
+	)
+)
+
 ui = tags$div(
 	tags$head(
 		tags$link(rel = "shortcut icon", type = "image/png", href = "iviewsense.png")
@@ -73,11 +85,6 @@ ui = tags$div(
 						icon = "chart-line"
 					),
 					bs4SidebarMenuItem(
-						text = "Check sheet",
-						tabName = "check_sheet",
-						icon = "check"
-					),
-					bs4SidebarMenuItem(
 						text = "Pareto",
 						tabName = "pareto",
 						icon = "percentage"
@@ -96,7 +103,6 @@ ui = tags$div(
 					control_chart_body,
 					histogram_body,
 					scatter_plot_body,
-					check_sheet_body,
 					pareto_body,
 					cause_effect_body
 				)
@@ -106,20 +112,13 @@ ui = tags$div(
 )
 
 server = function(input, output, session) {
-	# mainData <- read_xlsx("Geartek.xlsx", sheet = 1, col_names = TRUE)
-	# mainData <- formatData(mainData)
-	# minDate <- as.Date(min(mainData$Date_Time))
-	# maxDate <- as.Date(max(mainData$Date_Time))
-	# familyOptions <- unique(mainData$Family)
-	# custOptions <- unique(mainData$Cust)
-	# modelOptions <- unique(mainData$Model)
-	# resultOptions <- unique(mainData$Result)
-	# operatorOptions <- unique(mainData$Opr)
-	# machineOptions <- unique(mainData$Machine)
 	mainData <- data.frame()
-	checkSheetData <- data.frame()
 	checkSheetTableData <- data.frame()
 	hasDbConnection <- FALSE
+	causeEffectToken <- 0
+	stratificationTable <- data.frame()
+	checkSheetFilterData <- data.frame()
+	checkSheetFilterDataDisplay <- data.frame()
 	observeEvent(input$remote_or_local, {
 		output$data_source_body_ui <- renderUI({
 			if (input$remote_or_local %% 2 == 0) {
@@ -152,7 +151,6 @@ server = function(input, output, session) {
 				resultOptions <<- unique(mainData$Result)
 				operatorOptions <<- unique(mainData$Opr)
 				machineOptions <<- unique(mainData$Machine)
-				checkSheetData <<- getCheckSheetData()
 				hasDbConnection <<- TRUE
 				plots__trigger$trigger()
 			}
@@ -178,7 +176,8 @@ server = function(input, output, session) {
 		resultOptions <<- unique(mainData$Result)
 		operatorOptions <<- unique(mainData$Opr)
 		machineOptions <<- unique(mainData$Machine)
-		checkSheetData <<- getCheckSheetDataFromFile(mainData)
+		mainData$Defects_Category <<- ""
+		mainData$Defects_Qty <<- "1"
 		hasDbConnection <<- FALSE
 		plots__trigger$trigger()
 	})
@@ -863,68 +862,129 @@ server = function(input, output, session) {
 			arrange(Family, Cust) %>% select(Pass = passCount, Fail = failCount)
 		shiftThreeData <- constFields %>% left_join(unformattedData %>% filter(shift == shiftNames[3]), by = c("Family", "Cust")) %>%
 			arrange(Family, Cust) %>% select(Pass = passCount, Fail = failCount)
-		tableData <- cbind(shiftOneData, shiftTwoData, shiftThreeData)
-		kable(tableData, "html") %>%
+		observeButton <- data.frame(
+			"Edit Checksheet" = shinyInput(actionButton, nrow(shiftOneData), 'button_', label = "check sheet", onclick = 'Shiny.setInputValue(\"navigate_check_sheet\", this.id, {priority: \"event\"})')
+		)
+		stratificationTable <<- cbind(shiftOneData, shiftTwoData, shiftThreeData, observeButton)
+		kable(stratificationTable, "html", escape = FALSE) %>%
 			kable_styling("striped", full_width = F) %>%
-			add_header_above(c(" " = 2, "Shift 1" = 2, "Shift 2" = 2, "Shift 3" = 2))
+			add_header_above(c(" " = 2, "Shift 1" = 2, "Shift 2" = 2, "Shift 3" = 2, " " = 1))
 	}
 
-	output$headerText <- renderText({
-		plots__trigger$depend()
-		paste0("Total Fails: ", nrow(checkSheetData))
-	})
-	output$check_sheet_table <- renderDT({
-		plots__trigger$depend()
-		if (nrow(checkSheetData) == 0) return(data.frame())
-		checkSheetTableData <<- checkSheetData %>%
-			select(Date, Shift, Model, "Defects Category" = defects_category, "Defects Qty" = defects_qty)
-		datatable(
-			checkSheetTableData,
-			rownames = FALSE,
-			editable = TRUE,
-			class = "cell-border stripe",
-			filter = "top",
-			options = list(
-				pageLength = 100,
-				dom = 'tip'
-			)
+	observeEvent(input$navigate_check_sheet, {
+		selectedRow <- as.numeric(strsplit(input$navigate_check_sheet, "_")[[1]][2])
+		selectedData <- stratificationTable[selectedRow,]
+		familyFilter <- selectedData$Family
+		CustomerFilter <- selectedData$Cust
+		fromDateFilter <- input$stratification_filters_date_from
+		toDateFilter <- input$stratification_filters_date_to
+		modelFilter <- input$stratification_filters_model
+		operatorFilter <- input$stratification_filters_operator
+		checkSheetFilterData <<- mainData %>% filter(
+			Family %in% familyFilter & Cust %in% CustomerFilter & Date >= fromDateFilter &
+			Date <= toDateFilter & Model %in% modelFilter & operatorFilter %in% operatorFilter &
+			Result == failName
 		)
-	})
-	tableOutputProxy <- dataTableProxy("check_sheet_table")
-	observeEvent(input$check_sheet_table_cell_edit, {
-		info = input$check_sheet_table_cell_edit
-		if (!info$value %in% defectsCategories) {
-			popUpWindow(
-				paste0(
-					"<b>Please enter the Defects category from one of these values:</b><br><br>",
-					paste(defectsCategories, collapse = "<br>")
-				)
+		checkSheetFilterDataDisplay <<- checkSheetFilterData %>%
+			select(Date, shift, Model, "Defects Category" = Defects_Category, "Defects Quantity" = Defects_Qty)
+		output$check_sheet_table_ui <- renderDT({
+			datatable(
+				checkSheetFilterDataDisplay,
+				rownames = FALSE,
+				editable = TRUE,
+				class = "cell-border stripe",
+				options = list(dom = 'tip')
 			)
-			replaceData(tableOutputProxy, checkSheetTableData, resetPaging = FALSE, rownames = FALSE)
-			return()
-		}
-		if (info$col == 3) {
-			row_id <- checkSheetData[info$row, "id"]
-			if (hasDbConnection) updateDefectInDB(id = row_id, defect_cat = info$value)
-			checkSheetData$defects_category[checkSheetData$id == row_id] <<- info$value
-			checkSheetTableData[info$row, "Defects Category"] <<- info$value
-			pareto__trigger$trigger()
-			replaceData(tableOutputProxy, checkSheetTableData, resetPaging = FALSE, rownames = FALSE)
-		} else {
-			replaceData(tableOutputProxy, checkSheetTableData, resetPaging = FALSE, rownames = FALSE)
-		}
+		})
+		tableOutputProxy <- dataTableProxy("check_sheet_table_ui")
+		observeEvent(input$check_sheet_table_ui_cell_edit, {
+			info = input$check_sheet_table_ui_cell_edit
+			if (!info$value %in% defectsCategories) {
+				replaceData(tableOutputProxy, checkSheetFilterDataDisplay, resetPaging = FALSE, rownames = FALSE)
+				return()
+			}
+			if (info$col == 3) {
+				row_id <- checkSheetFilterData[info$row, "id"]
+				if (hasDbConnection) updateDefectInDB(id = row_id, defect_cat = info$value)
+				checkSheetFilterData$Defects_Category[checkSheetFilterData$id == row_id] <<- info$value
+				checkSheetFilterDataDisplay[info$row, "Defects Category"] <<- info$value
+				pareto__trigger$trigger()
+				replaceData(tableOutputProxy, checkSheetFilterDataDisplay, resetPaging = FALSE, rownames = FALSE)
+			} else {
+				replaceData(tableOutputProxy, checkSheetFilterDataDisplay, resetPaging = FALSE, rownames = FALSE)
+			}
+		})
+		showModal(
+            modalDialog(
+                title = "Check Sheet",
+                size = "l",
+                fluidPage(
+                    align = "center",
+                    fluidRow(
+                    	HTML(
+                    		paste0(
+								"<b>Please enter the Defects category from one of these values:</b><br>",
+								paste(defectsCategories, collapse = ", ")
+							)
+                    	)
+                    ),
+                    fluidRow(DTOutput("check_sheet_table_ui"))
+                ),
+                footer = NULL,
+                easyClose = TRUE
+            )
+        )
 	})
+
 	output$pareto_plot <- renderPlot({
 		plots__trigger$depend()
 		pareto__trigger$depend()
+		checkSheetData <- mainData %>% filter(Defects_Category %in% defectsCategories)
 		if (nrow(checkSheetData) == 0) return(textPlot())
-		plotData <- checkSheetData %>% filter(defects_category %in% defectsCategories)
-		if (nrow(plotData) == 0) return(textPlot("Please enter Defects Category in the Check sheet to get the Pareto chart"))
-		plotData$defects_qty <- as.numeric(plotData$defects_qty)
-		plotData <- plotData %>% group_by(defects_category) %>% summarise(count_defects = sum(defects_qty)) %>% ungroup()
+		plotData <- checkSheetData %>% filter(Defects_Category %in% defectsCategories)
+		if (nrow(plotData) == 0) return(textPlot("Please add Defects from the Stratification tab to get the Pareto chart"))
+		plotData$Defects_Qty <- as.numeric(plotData$Defects_Qty)
+		plotData <- plotData %>% group_by(Defects_Category) %>% summarise(count_defects = sum(Defects_Qty)) %>% ungroup()
 		defect <- plotData$count_defects
-		names(defect) <- plotData$defects_category
+		names(defect) <- plotData$Defects_Category
 		pareto.chart(defect, ylab = "Frequency of defects")
+	})
+
+	output$cause_effect_filters <- renderUI({
+		fluidRow(
+			column(
+				2,
+				pickerInput(
+					"cause_effect_filters_family", "Family",
+					familyOptions, familyOptions, multiple = TRUE,
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
+				)
+			),
+			column(
+				2,
+				pickerInput(
+					"cause_effect_filters_cust", "Customer",
+					custOptions, custOptions, multiple = TRUE,
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
+				)
+			),
+			column(
+				2,
+				pickerInput(
+					"cause_effect_filters_model", "Model",
+					modelOptions, modelOptions, multiple = TRUE,
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
+				)
+			),
+			column(
+				2,
+				pickerInput(
+					"cause_effect_filters_defect_cat", "Defect Category",
+					modelOptions, modelOptions, multiple = TRUE,
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
+				)
+			)
+		)
 	})
 }
 

@@ -135,17 +135,3 @@ cause_effect_body <- bs4TabItem(
 		)
 	)
 )
-
-
-check_sheet_body <- bs4TabItem(
-	tabName = "check_sheet",
-	tags$div(
-		fluidPage(
-			fluidRow(
-				column(12, align = "center", style = "font-size: 20px;", "Check sheet"),
-				column(12, textOutput("headerText")),
-				column(12, DTOutput("check_sheet_table"))
-			)
-		)
-	)
-)
