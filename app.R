@@ -720,17 +720,17 @@ server = function(input, output, session) {
 			summarise(passCount = sum(hasPassed), failCount = n() - passCount) %>%
 			ungroup() %>% select(Family, Cust, shift, passCount, Model, Opr, DayOfWeek, failCount)
 		shiftPlotData <- passCountData %>% group_by(shift) %>%
-			summarise(pass_percentage = round(sum(passCount) / (sum(passCount) + sum(failCount)) * 100, 1))
+			summarise(fif_percentage = round(100 - sum(passCount) / (sum(passCount) + sum(failCount)) * 100, 1))
 		familyPlotData <- passCountData %>% group_by(Family) %>%
-			summarise(pass_percentage = round(sum(passCount) / (sum(passCount) + sum(failCount)) * 100, 1))
+			summarise(fif_percentage = round(100 - sum(passCount) / (sum(passCount) + sum(failCount)) * 100, 1))
 		customerPlotData <- passCountData %>% group_by(Cust) %>%
-			summarise(pass_percentage = round(sum(passCount) / (sum(passCount) + sum(failCount)) * 100, 1))
+			summarise(fif_percentage = round(100 - sum(passCount) / (sum(passCount) + sum(failCount)) * 100, 1))
 		modelPlotData <- passCountData %>% group_by(Model) %>%
-			summarise(pass_percentage = round(sum(passCount) / (sum(passCount) + sum(failCount)) * 100, 1))
+			summarise(fif_percentage = round(100 - sum(passCount) / (sum(passCount) + sum(failCount)) * 100, 1))
 		operatorPlotData <- passCountData %>% group_by(Opr) %>%
-			summarise(pass_percentage = round(sum(passCount) / (sum(passCount) + sum(failCount)) * 100, 1))
+			summarise(fif_percentage = round(100 - sum(passCount) / (sum(passCount) + sum(failCount)) * 100, 1))
 		dayOfWeekPlotData <- passCountData %>% group_by(DayOfWeek) %>%
-			summarise(pass_percentage = round(sum(passCount) / (sum(passCount) + sum(failCount)) * 100, 1))
+			summarise(fif_percentage = round(100 - sum(passCount) / (sum(passCount) + sum(failCount)) * 100, 1))
 		output$stratification_shift <- renderPlotly({
 			req(input$stratification_filters_date_from)
 			req(input$stratification_filters_date_to)
@@ -741,14 +741,14 @@ server = function(input, output, session) {
 			if (nrow(shiftPlotData) == 0) return(ggplotly(textPlot()))
 			plot_ly(
 				data = shiftPlotData,
-				x = ~pass_percentage,
-				y = reorder(shiftPlotData$shift, shiftPlotData$pass_percentage),
+				x = ~fif_percentage,
+				y = reorder(shiftPlotData$shift, shiftPlotData$fif_percentage),
 				type = "bar", orientation = 'h',
 				hovertemplate = paste(
 					"<i>%{y}'s Pass percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
 				)
 			) %>% layout(
-				title = "% of Pass across different Shifts",
+				title = "% of FTF across different Shifts",
 				xaxis = list(visible = FALSE)
 			) %>% config(displayModeBar = FALSE)
 		})
@@ -762,14 +762,14 @@ server = function(input, output, session) {
 			if (nrow(familyPlotData) == 0) return(ggplotly(textPlot()))
 			plot_ly(
 				data = familyPlotData,
-				x = ~pass_percentage,
-				y = reorder(familyPlotData$Family, familyPlotData$pass_percentage),
+				x = ~fif_percentage,
+				y = reorder(familyPlotData$Family, familyPlotData$fif_percentage),
 				type = "bar", orientation = 'h',
 				hovertemplate = paste(
 					"<i>%{y}'s Pass percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
 				)
 			) %>% layout(
-				title = "% of Pass across different Families",
+				title = "% of FTF across different Families",
 				xaxis = list(visible = FALSE)
 			) %>% config(displayModeBar = FALSE)
 		})
@@ -783,14 +783,14 @@ server = function(input, output, session) {
 			if (nrow(customerPlotData) == 0) return(ggplotly(textPlot()))
 			plot_ly(
 				data = customerPlotData,
-				x = ~pass_percentage,
-				y = reorder(customerPlotData$Cust, customerPlotData$pass_percentage),
+				x = ~fif_percentage,
+				y = reorder(customerPlotData$Cust, customerPlotData$fif_percentage),
 				type = "bar", orientation = 'h',
 				hovertemplate = paste(
 					"<i>%{y}'s Pass percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
 				)
 			) %>% layout(
-				title = "% of Pass across different Customers",
+				title = "% of FTF across different Customers",
 				xaxis = list(visible = FALSE)
 			) %>% config(displayModeBar = FALSE)
 		})
@@ -804,14 +804,14 @@ server = function(input, output, session) {
 			if (nrow(modelPlotData) == 0) return(ggplotly(textPlot()))
 			plot_ly(
 				data = modelPlotData,
-				x = ~pass_percentage,
-				y = reorder(modelPlotData$Model, modelPlotData$pass_percentage),
+				x = ~fif_percentage,
+				y = reorder(modelPlotData$Model, modelPlotData$fif_percentage),
 				type = "bar", orientation = 'h',
 				hovertemplate = paste(
 					"<i>%{y}'s Pass percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
 				)
 			) %>% layout(
-				title = "% of Pass across different Models",
+				title = "% of FTF across different Models",
 				xaxis = list(visible = FALSE)
 			) %>% config(displayModeBar = FALSE)
 		})
@@ -825,14 +825,14 @@ server = function(input, output, session) {
 			if (nrow(operatorPlotData) == 0) return(ggplotly(textPlot()))
 			plot_ly(
 				data = operatorPlotData,
-				x = ~pass_percentage,
-				y = reorder(operatorPlotData$Opr, operatorPlotData$pass_percentage),
+				x = ~fif_percentage,
+				y = reorder(operatorPlotData$Opr, operatorPlotData$fif_percentage),
 				type = "bar", orientation = 'h',
 				hovertemplate = paste(
 					"<i>%{y}'s Pass percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
 				)
 			) %>% layout(
-				title = "% of Pass across different Operators",
+				title = "% of FTF across different Operators",
 				xaxis = list(visible = FALSE)
 			) %>% config(displayModeBar = FALSE)
 		})
@@ -846,14 +846,14 @@ server = function(input, output, session) {
 			if (nrow(dayOfWeekPlotData) == 0) return(ggplotly(textPlot()))
 			plot_ly(
 				data = dayOfWeekPlotData,
-				x = ~pass_percentage,
-				y = reorder(dayOfWeekPlotData$DayOfWeek, dayOfWeekPlotData$pass_percentage),
+				x = ~fif_percentage,
+				y = reorder(dayOfWeekPlotData$DayOfWeek, dayOfWeekPlotData$fif_percentage),
 				type = "bar", orientation = 'h',
 				hovertemplate = paste(
 					"<i>%{y}'s Pass percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
 				)
 			) %>% layout(
-				title = "% of Pass across different days of the week"
+				title = "% of FTF across different days of the week"
 			) %>% config(displayModeBar = FALSE)
 		})
 		shiftOneData <- constFields %>% left_join(unformattedData %>% filter(shift == shiftNames[1]), by = c("Family", "Cust")) %>%
