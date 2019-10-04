@@ -176,6 +176,7 @@ server = function(input, output, session) {
 		resultOptions <<- unique(mainData$Result)
 		operatorOptions <<- unique(mainData$Opr)
 		machineOptions <<- unique(mainData$Machine)
+		checkSheetData <<- getCheckSheetDataFromFile(mainData)
 		plots__trigger$trigger()
 	})
 

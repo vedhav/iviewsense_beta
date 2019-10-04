@@ -85,6 +85,24 @@ getCheckSheetData <- function() {
     return(returnData)
 }
 
+getCheckSheetDataFromFile <- function(data) {
+    returnData <- data.frame(
+        id = data$id,
+        Machine = data$Machine,
+        Date_Time = data$Date_Time,
+        Date = as.Date(data$Date_Time),
+        Family = data$Family,
+        Model = data$Model,
+        Shift = getShifts(data$Date_Time),
+        Stn = data$Stn,
+        Opr = data$Opr,
+        defects_category = "",
+        defects_qty = 1,
+        stringsAsFactors = FALSE
+    )
+    return(returnData)
+}
+
 updateDefectInDB <- function(id, defect_cat) {
     execute(
         "UPDATE defects SET defects_category = ? WHERE id = ?",
