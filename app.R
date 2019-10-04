@@ -143,8 +143,8 @@ server = function(input, output, session) {
 			} else {
 				ui <- HTML("The data from MySQL database will be used for analysis!")
 				mainData <<- selectDbQuery("SELECT * FROM testresults") %>% formatData()
-				minDate <<- as.Date(min(mainData$Date_Time))
-				maxDate <<- as.Date(max(mainData$Date_Time))
+				minDate <<- as.Date(min(mainData$Date_Time), tz = "")
+				maxDate <<- as.Date(max(mainData$Date_Time), tz = "")
 				familyOptions <<- unique(mainData$Family)
 				custOptions <<- unique(mainData$Cust)
 				modelOptions <<- unique(mainData$Model)
@@ -168,8 +168,8 @@ server = function(input, output, session) {
 			return()
 		}
 		mainData <<- formatData(mainData)
-		minDate <<- as.Date(min(mainData$Date_Time))
-		maxDate <<- as.Date(max(mainData$Date_Time))
+		minDate <<- as.Date(min(mainData$Date_Time), tz = "")
+		maxDate <<- as.Date(max(mainData$Date_Time), tz = "")
 		familyOptions <<- unique(mainData$Family)
 		custOptions <<- unique(mainData$Cust)
 		modelOptions <<- unique(mainData$Model)

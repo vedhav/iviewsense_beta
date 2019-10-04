@@ -71,7 +71,7 @@ formatData <- function(data) {
     data$Opr[is.na(data$Opr)] <- "NA"
     data$Date_Time <- as.POSIXct(data$Date_Time)
     data$shift <- getShifts(data$Date_Time)
-    data$Date <- as.Date(data$Date_Time)
+    data$Date <- as.Date(data$Date_Time, tz = "")
     data$Machine <- as.character(data$Machine)
     return(data)
 }
