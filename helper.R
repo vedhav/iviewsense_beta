@@ -66,8 +66,53 @@ formatData <- function(data) {
     return(data)
 }
 
+getCheckSheetData <- function() {
+    data <- selectDbQuery("SELECT * FROM defects")
+    returnData <- data.frame(
+        id = data$id,
+        Machine = data$Machine,
+        Date_Time = data$Date_Time,
+        Date = as.Date(data$Date_Time),
+        Family = data$Family,
+        Model = data$Model,
+        Shift = getShifts(data$Date_Time),
+        Stn = data$Stn,
+        Opr = data$Opr,
+        defects_category = data$defects_category,
+        defects_qty = data$defects_qty,
+        stringsAsFactors = FALSE
+    )
+    return(returnData)
+}
+
+getCheckSheetDataFromFile <- function(data) {
+    returnData <- data.frame(
+        id = data$id,
+        Machine = data$Machine,
+        Date_Time = data$Date_Time,
+        Date = as.Date(data$Date_Time),
+        Family = data$Family,
+        Model = data$Model,
+        Shift = getShifts(data$Date_Time),
+        Stn = data$Stn,
+        Opr = data$Opr,
+        defects_category = "",
+        defects_qty = 1,
+        stringsAsFactors = FALSE
+    )
+    return(returnData)
+}
+
+updateDefectInDB <- function(id, defect_cat) {
+    execute(
+        "UPDATE defects SET defects_category = ? WHERE id = ?",
+        list(defect_cat, id)
+    )
+    print("Defect has been updated!")
+}
+
 killDbxConnections <- function () {
-    all_cons <- dbListConnections(dbDriver("PostgreSQL"))
+    all_cons <- dbListConnections(databaseDriver)
     for(con in all_cons)
         dbxDisconnect(con)
     print(paste(length(all_cons), " connections killed."))
@@ -85,7 +130,7 @@ insert <- function(tableName, values) {
     }
     conn <- tryCatch({
         dbxConnect(
-            adapter = "postgres",
+            adapter = connectionAdapter,
             user = hostUserName,
             password = hostPassword,
             host = hostIP,
@@ -95,7 +140,7 @@ insert <- function(tableName, values) {
     }, error = function(err) {
         killDbxConnections()
         dbxConnect(
-            adapter = "postgres",
+            adapter = connectionAdapter,
             user = hostUserName,
             password = hostPassword,
             host = hostIP,
@@ -111,7 +156,7 @@ insert <- function(tableName, values) {
 execute <- function(query, params = NULL) {
     conn <- tryCatch({
         dbxConnect(
-            adapter = "postgres",
+            adapter = connectionAdapter,
             user = hostUserName,
             password = hostPassword,
             host = hostIP,
@@ -121,7 +166,7 @@ execute <- function(query, params = NULL) {
     }, error = function(err) {
         killDbxConnections()
         dbxConnect(
-            adapter = "postgres",
+            adapter = connectionAdapter,
             user = hostUserName,
             password = hostPassword,
             host = hostIP,
@@ -137,7 +182,7 @@ execute <- function(query, params = NULL) {
 selectDbQuery <- function(query, params = NULL) {
     conn <- tryCatch({
         dbxConnect(
-            adapter = "postgres",
+            adapter = connectionAdapter,
             user = hostUserName,
             password = hostPassword,
             host = hostIP,
@@ -147,7 +192,7 @@ selectDbQuery <- function(query, params = NULL) {
     }, error = function(err) {
         killDbxConnections()
         dbxConnect(
-            adapter = "postgres",
+            adapter = connectionAdapter,
             user = hostUserName,
             password = hostPassword,
             host = hostIP,
@@ -180,7 +225,7 @@ selectDbQuery <- function(query, params = NULL) {
 delete <- function(tableName, values) {
     conn <- tryCatch({
         dbxConnect(
-            adapter = "postgres",
+            adapter = connectionAdapter,
             user = hostUserName,
             password = hostPassword,
             host = hostIP,
@@ -190,7 +235,7 @@ delete <- function(tableName, values) {
     }, error = function(err) {
         killDbxConnections()
         dbxConnect(
-            adapter = "postgres",
+            adapter = connectionAdapter,
             user = hostUserName,
             password = hostPassword,
             host = hostIP,
@@ -229,7 +274,7 @@ upsert <- function(tableName, values, where_cols = 'id') {
     }
     conn <- tryCatch({
         dbxConnect(
-            adapter = "postgres",
+            adapter = connectionAdapter,
             user = hostUserName,
             password = hostPassword,
             host = hostIP,
@@ -239,7 +284,7 @@ upsert <- function(tableName, values, where_cols = 'id') {
     }, error = function(err) {
         killDbxConnections()
         dbxConnect(
-            adapter = "postgres",
+            adapter = connectionAdapter,
             user = hostUserName,
             password = hostPassword,
             host = hostIP,

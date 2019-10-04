@@ -117,6 +117,8 @@ server = function(input, output, session) {
 	# operatorOptions <- unique(mainData$Opr)
 	# machineOptions <- unique(mainData$Machine)
 	mainData <- data.frame()
+	checkSheetData <- data.frame()
+	checkSheetTableData <- data.frame()
 	observeEvent(input$remote_or_local, {
 		output$data_source_body_ui <- renderUI({
 			if (input$remote_or_local %% 2 == 0) {
@@ -139,7 +141,7 @@ server = function(input, output, session) {
 					)
 				)
 			} else {
-				ui <- HTML("The data from PostgreSQL will be used for analysis!")
+				ui <- HTML("The data from MySQL database will be used for analysis!")
 				mainData <<- selectDbQuery("SELECT * FROM testresults") %>% formatData()
 				minDate <<- as.Date(min(mainData$Date_Time))
 				maxDate <<- as.Date(max(mainData$Date_Time))
@@ -148,6 +150,8 @@ server = function(input, output, session) {
 				modelOptions <<- unique(mainData$Model)
 				resultOptions <<- unique(mainData$Result)
 				operatorOptions <<- unique(mainData$Opr)
+				machineOptions <<- unique(mainData$Machine)
+				checkSheetData <<- getCheckSheetData()
 				plots__trigger$trigger()
 			}
 			return(ui)
@@ -172,6 +176,7 @@ server = function(input, output, session) {
 		resultOptions <<- unique(mainData$Result)
 		operatorOptions <<- unique(mainData$Opr)
 		machineOptions <<- unique(mainData$Machine)
+		checkSheetData <<- getCheckSheetDataFromFile(mainData)
 		plots__trigger$trigger()
 	})
 
@@ -284,12 +289,12 @@ server = function(input, output, session) {
 		lslValue <- round(mean(plot_variable) - 3 * sd(plot_variable), 2)
 		uslValue <- round(mean(plot_variable) + 3 * sd(plot_variable), 2)
 		updateNumericInput(
-			session, "histogram_lsl", value = lslValue,
-			label = HTML(paste0("Enter the LCL (mean - 3 x sd = ", lslValue, ")"))
+			session, "histogram_lsl", value = lslValue
+			# label = HTML(paste0("Enter the LCL (mean - 3 x sd = ", lslValue, ")"))
 		)
 		updateNumericInput(
-			session, "histogram_usl", value = uslValue,
-			label = HTML(paste0("Enter the LCL (mean + 3 x sd = ", uslValue, ")"))
+			session, "histogram_usl", value = uslValue
+			# label = HTML(paste0("Enter the LCL (mean + 3 x sd = ", uslValue, ")"))
 		)
 		output$histogram_plot <- renderPlot({
 			plots__trigger$depend()
@@ -582,19 +587,21 @@ server = function(input, output, session) {
 			)
 		if (nrow(plotData) == 0) {
 			output$control_chart_plot_xbar_one <- renderPlot(textPlot())
+			output$control_chart_plot_xbar_r <- renderPlot(textPlot())
 			return(NULL)
 		}
 		plot_variable <- plotData[[input$control_chart_column]]
 		plot_variable <- plot_variable[!is.na(plot_variable)]
-		lslValue <- round(mean(plot_variable) - 3 * sd(plot_variable), 2)
-		uslValue <- round(mean(plot_variable) + 3 * sd(plot_variable), 2)
+		outPlot <- qcc(data = plot_variable, type = "xbar.one", plot = FALSE)
+		lslValue <- round(outPlot$limits[1], 2)
+		uslValue <- round(outPlot$limits[2], 2)
 		updateNumericInput(
-			session, "control_chart_lcl", value = lslValue,
-			label = HTML(paste0("Enter the LCL (mean - 3 x sd = ", lslValue, ")"))
+			session, "control_chart_lcl", value = lslValue
+			# label = HTML(paste0("Enter the LCL (mean - 3 x sd = ", lslValue, ")"))
 		)
 		updateNumericInput(
-			session, "control_chart_ucl", value = uslValue,
-			label = HTML(paste0("Enter the LCL (mean + 3 x sd = ", uslValue, ")"))
+			session, "control_chart_ucl", value = uslValue
+			# label = HTML(paste0("Enter the UCL (mean + 3 x sd = ", uslValue, ")"))
 		)
 		output$control_chart_plot_xbar_one <- renderPlot({
 			plots__trigger$depend()
@@ -602,6 +609,30 @@ server = function(input, output, session) {
 				qcc(
 					data = plot_variable, type = "xbar.one",
 					limits = c(input$control_chart_lcl, input$control_chart_ucl)
+				)
+			}, error = function(err) {
+				returnPlot <- textPlot(paste0("There is no proper data for ", input$control_chart_column))
+			})
+			return(returnPlot)
+		})
+		matrixData <- matrix(cbind(plot_variable[1:length(plot_variable) - 1], plot_variable[2:length(plot_variable)]), ncol = 2)
+		outPlot <- qcc(data = matrixData, type = "R", plot = FALSE)
+		lslValue <- round(outPlot$limits[1], 2)
+		uslValue <- round(outPlot$limits[2], 2)
+		updateNumericInput(
+			session, "control_chart_r_lcl", value = lslValue,
+			label = HTML(paste0("Enter the LCL (mean - 3 x sd = ", lslValue, ")"))
+		)
+		updateNumericInput(
+			session, "control_chart_r_ucl", value = uslValue,
+			label = HTML(paste0("Enter the UCL (mean + 3 x sd = ", uslValue, ")"))
+		)
+		output$control_chart_plot_xbar_r <- renderPlot({
+			plots__trigger$depend()
+			returnPlot <- tryCatch({
+				qcc(
+					data = matrixData, type = "R",
+					limits = c(input$control_chart_r_lcl, input$control_chart_r_ucl)
 				)
 			}, error = function(err) {
 				returnPlot <- textPlot(paste0("There is no proper data for ", input$control_chart_column))
@@ -698,6 +729,12 @@ server = function(input, output, session) {
 		dayOfWeekPlotData <- passCountData %>% group_by(DayOfWeek) %>%
 			summarise(pass_percentage = round(sum(passCount) / (sum(passCount) + sum(failCount)) * 100, 1))
 		output$stratification_shift <- renderPlotly({
+			req(input$stratification_filters_date_from)
+			req(input$stratification_filters_date_to)
+			req(input$stratification_filters_family)
+			req(input$stratification_filters_cust)
+			req(input$stratification_filters_model)
+			req(input$stratification_filters_operator)
 			if (nrow(shiftPlotData) == 0) return(ggplotly(textPlot()))
 			plot_ly(
 				data = shiftPlotData,
@@ -713,6 +750,12 @@ server = function(input, output, session) {
 			) %>% config(displayModeBar = FALSE)
 		})
 		output$stratification_family <- renderPlotly({
+			req(input$stratification_filters_date_from)
+			req(input$stratification_filters_date_to)
+			req(input$stratification_filters_family)
+			req(input$stratification_filters_cust)
+			req(input$stratification_filters_model)
+			req(input$stratification_filters_operator)
 			if (nrow(familyPlotData) == 0) return(ggplotly(textPlot()))
 			plot_ly(
 				data = familyPlotData,
@@ -728,6 +771,12 @@ server = function(input, output, session) {
 			) %>% config(displayModeBar = FALSE)
 		})
 		output$stratification_customer <- renderPlotly({
+			req(input$stratification_filters_date_from)
+			req(input$stratification_filters_date_to)
+			req(input$stratification_filters_family)
+			req(input$stratification_filters_cust)
+			req(input$stratification_filters_model)
+			req(input$stratification_filters_operator)
 			if (nrow(customerPlotData) == 0) return(ggplotly(textPlot()))
 			plot_ly(
 				data = customerPlotData,
@@ -743,6 +792,12 @@ server = function(input, output, session) {
 			) %>% config(displayModeBar = FALSE)
 		})
 		output$stratification_model <- renderPlotly({
+			req(input$stratification_filters_date_from)
+			req(input$stratification_filters_date_to)
+			req(input$stratification_filters_family)
+			req(input$stratification_filters_cust)
+			req(input$stratification_filters_model)
+			req(input$stratification_filters_operator)
 			if (nrow(modelPlotData) == 0) return(ggplotly(textPlot()))
 			plot_ly(
 				data = modelPlotData,
@@ -758,6 +813,12 @@ server = function(input, output, session) {
 			) %>% config(displayModeBar = FALSE)
 		})
 		output$stratification_operator <- renderPlotly({
+			req(input$stratification_filters_date_from)
+			req(input$stratification_filters_date_to)
+			req(input$stratification_filters_family)
+			req(input$stratification_filters_cust)
+			req(input$stratification_filters_model)
+			req(input$stratification_filters_operator)
 			if (nrow(operatorPlotData) == 0) return(ggplotly(textPlot()))
 			plot_ly(
 				data = operatorPlotData,
@@ -773,6 +834,12 @@ server = function(input, output, session) {
 			) %>% config(displayModeBar = FALSE)
 		})
 		output$stratification_day_of_week <- renderPlotly({
+			req(input$stratification_filters_date_from)
+			req(input$stratification_filters_date_to)
+			req(input$stratification_filters_family)
+			req(input$stratification_filters_cust)
+			req(input$stratification_filters_model)
+			req(input$stratification_filters_operator)
 			if (nrow(dayOfWeekPlotData) == 0) return(ggplotly(textPlot()))
 			plot_ly(
 				data = dayOfWeekPlotData,
@@ -797,6 +864,62 @@ server = function(input, output, session) {
 			kable_styling("striped", full_width = F) %>%
 			add_header_above(c(" " = 2, "Shift 1" = 2, "Shift 2" = 2, "Shift 3" = 2))
 	}
+
+	output$headerText <- renderText({
+		plots__trigger$depend()
+		paste0("Total Fails: ", nrow(checkSheetData))
+	})
+	output$check_sheet_table <- renderDT({
+		plots__trigger$depend()
+		if (nrow(checkSheetData) == 0) return(data.frame())
+		checkSheetTableData <<- checkSheetData %>%
+			select(Date, Shift, Model, "Defects Category" = defects_category, "Defects Qty" = defects_qty)
+		datatable(
+			checkSheetTableData,
+			rownames = FALSE,
+			editable = TRUE,
+			class = "cell-border stripe",
+			options = list(
+				pageLength = 20
+			)
+		)
+	})
+	tableOutputProxy <- dataTableProxy("check_sheet_table")
+	observeEvent(input$check_sheet_table_cell_edit, {
+		info = input$check_sheet_table_cell_edit
+		if (!info$value %in% defectsCategories) {
+			popUpWindow(
+				paste0(
+					"<b>Please enter the Defects category from one of these values:</b><br><br>",
+					paste(defectsCategories, collapse = ", ")
+				)
+			)
+			replaceData(tableOutputProxy, checkSheetTableData, resetPaging = FALSE, rownames = FALSE)
+			return()
+		}
+		if (info$col == 3) {
+			row_id <- checkSheetData[info$row, "id"]
+			updateDefectInDB(id = row_id, defect_cat = info$value)
+			checkSheetData$defects_category[checkSheetData$id == row_id] <<- info$value
+			checkSheetTableData[info$row, "Defects Category"] <<- info$value
+			pareto__trigger$trigger()
+			replaceData(tableOutputProxy, checkSheetTableData, resetPaging = FALSE, rownames = FALSE)
+		} else {
+			replaceData(tableOutputProxy, checkSheetTableData, resetPaging = FALSE, rownames = FALSE)
+		}
+	})
+	output$pareto_plot <- renderPlot({
+		plots__trigger$depend()
+		pareto__trigger$depend()
+		if (nrow(checkSheetData) == 0) return(textPlot())
+		plotData <- checkSheetData %>% filter(defects_category %in% defectsCategories)
+		if (nrow(plotData) == 0) return(textPlot("Please enter Defects Category in the Check sheet to get the Pareto chart"))
+		plotData$defects_qty <- as.numeric(plotData$defects_qty)
+		plotData <- plotData %>% group_by(defects_category) %>% summarise(count_defects = sum(defects_qty)) %>% ungroup()
+		defect <- plotData$count_defects
+		names(defect) <- plotData$defects_category
+		pareto.chart(defect, ylab = "Error frequency")
+	})
 }
 
 shinyApp(ui, server)
