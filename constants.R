@@ -46,6 +46,7 @@ custOptions <- NULL
 modelOptions <- NULL
 resultOptions <- NULL
 operatorOptions <- NULL
+machineOptions <- NULL
 
 
 # Database related constants
