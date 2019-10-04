@@ -698,6 +698,12 @@ server = function(input, output, session) {
 		dayOfWeekPlotData <- passCountData %>% group_by(DayOfWeek) %>%
 			summarise(pass_percentage = round(sum(passCount) / (sum(passCount) + sum(failCount)) * 100, 1))
 		output$stratification_shift <- renderPlotly({
+			req(input$stratification_filters_date_from)
+			req(input$stratification_filters_date_to)
+			req(input$stratification_filters_family)
+			req(input$stratification_filters_cust)
+			req(input$stratification_filters_model)
+			req(input$stratification_filters_operator)
 			if (nrow(shiftPlotData) == 0) return(ggplotly(textPlot()))
 			plot_ly(
 				data = shiftPlotData,
@@ -713,6 +719,12 @@ server = function(input, output, session) {
 			) %>% config(displayModeBar = FALSE)
 		})
 		output$stratification_family <- renderPlotly({
+			req(input$stratification_filters_date_from)
+			req(input$stratification_filters_date_to)
+			req(input$stratification_filters_family)
+			req(input$stratification_filters_cust)
+			req(input$stratification_filters_model)
+			req(input$stratification_filters_operator)
 			if (nrow(familyPlotData) == 0) return(ggplotly(textPlot()))
 			plot_ly(
 				data = familyPlotData,
@@ -728,6 +740,12 @@ server = function(input, output, session) {
 			) %>% config(displayModeBar = FALSE)
 		})
 		output$stratification_customer <- renderPlotly({
+			req(input$stratification_filters_date_from)
+			req(input$stratification_filters_date_to)
+			req(input$stratification_filters_family)
+			req(input$stratification_filters_cust)
+			req(input$stratification_filters_model)
+			req(input$stratification_filters_operator)
 			if (nrow(customerPlotData) == 0) return(ggplotly(textPlot()))
 			plot_ly(
 				data = customerPlotData,
@@ -743,6 +761,12 @@ server = function(input, output, session) {
 			) %>% config(displayModeBar = FALSE)
 		})
 		output$stratification_model <- renderPlotly({
+			req(input$stratification_filters_date_from)
+			req(input$stratification_filters_date_to)
+			req(input$stratification_filters_family)
+			req(input$stratification_filters_cust)
+			req(input$stratification_filters_model)
+			req(input$stratification_filters_operator)
 			if (nrow(modelPlotData) == 0) return(ggplotly(textPlot()))
 			plot_ly(
 				data = modelPlotData,
@@ -758,6 +782,12 @@ server = function(input, output, session) {
 			) %>% config(displayModeBar = FALSE)
 		})
 		output$stratification_operator <- renderPlotly({
+			req(input$stratification_filters_date_from)
+			req(input$stratification_filters_date_to)
+			req(input$stratification_filters_family)
+			req(input$stratification_filters_cust)
+			req(input$stratification_filters_model)
+			req(input$stratification_filters_operator)
 			if (nrow(operatorPlotData) == 0) return(ggplotly(textPlot()))
 			plot_ly(
 				data = operatorPlotData,
@@ -773,6 +803,12 @@ server = function(input, output, session) {
 			) %>% config(displayModeBar = FALSE)
 		})
 		output$stratification_day_of_week <- renderPlotly({
+			req(input$stratification_filters_date_from)
+			req(input$stratification_filters_date_to)
+			req(input$stratification_filters_family)
+			req(input$stratification_filters_cust)
+			req(input$stratification_filters_model)
+			req(input$stratification_filters_operator)
 			if (nrow(dayOfWeekPlotData) == 0) return(ggplotly(textPlot()))
 			plot_ly(
 				data = dayOfWeekPlotData,
