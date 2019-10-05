@@ -76,12 +76,24 @@ formatData <- function(data) {
     return(data)
 }
 
-updateDefectInDB <- function(id, defect_cat) {
+updateCauseEffectTable <- function(newData) {
+    currentData <- selectDbQuery("SELECT * FROM causeeffect")
+    currentData$all <- paste0(currentData$effect, currentData$Family, currentData$Cust, currentData$Model)
+    newData$all <- paste0(newData$effect, newData$Family, newData$Cust, newData$Model)
+    if (!newData$all %in% currentData$all) {
+        newData$cause <- toJSON(NULL)
+        newData$all <- NULL
+        insert("causeeffect", newData)
+    }
+}
+
+updateDefectInDB <- function(id, defect_cat, causeEffectData) {
     # print(paste0("UPDATE testresults SET Defects_Category = ", defect_cat, " WHERE id = ", id))
     execute(
         "UPDATE testresults SET Defects_Category = ? WHERE id = ?",
         list(defect_cat, id)
     )
+    updateCauseEffectTable(causeEffectData)
 }
 
 killDbxConnections <- function () {

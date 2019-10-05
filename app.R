@@ -905,7 +905,13 @@ server = function(input, output, session) {
 			}
 			if (info$col == 3) {
 				row_id <- checkSheetFilterData[info$row, "id"]
-				if (hasDbConnection) updateDefectInDB(id = row_id, defect_cat = info$value)
+				causeEffectData <- data.frame(
+					effect = info$value,
+					Family = checkSheetFilterData[info$row, "Family"],
+					Cust = checkSheetFilterData[info$row, "Cust"],
+					Model = checkSheetFilterData[info$row, "Model"]
+				)
+				if (hasDbConnection) updateDefectInDB(id = row_id, defect_cat = info$value, causeEffectData)
 				checkSheetFilterData$Defects_Category[checkSheetFilterData$id == row_id] <<- info$value
 				checkSheetFilterDataDisplay[info$row, "Defects Category"] <<- info$value
 				mainData[mainData$id == row_id, "Defects_Category"] <<- info$value
@@ -1022,6 +1028,7 @@ server = function(input, output, session) {
 		datatable(
 			tableData,
 			rownames = FALSE,
+			editable = TRUE,
 			class = "cell-border stripe",
 			options = list(dom = 'tip')
 		)
