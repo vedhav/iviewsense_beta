@@ -6,7 +6,8 @@ cause_effect_body <- bs4TabItem(
 		fluidPage(
 			fluidRow(
 				column(12, align = "center", style = "font-size: 20px;", "Cause & effect"),
-				column(12, uiOutput("cause_effect_filters"))
+				column(12, uiOutput("cause_effect_filters")),
+				column(12, plotOutput("cause_effect_fish_bone_plot"))
 			)
 		)
 	)
@@ -1093,6 +1094,15 @@ server = function(input, output, session) {
 	})
 
 	output$cause_effect_filters <- renderUI({
+		plots__trigger$depend()
+		pareto__trigger$depend()
+		tableData <- mainData %>% filter(Defects_Category %in% defectsCategories)
+		if (nrow(tableData) == 0) return()
+		defectsOptions <- unique(tableData$Defects_Category)
+		familyOptions <- unique(tableData$Family)
+		custOptions <- unique(tableData$Cust)
+		modelOptions <- unique(tableData$Model)
+		shiftList <- unique(tableData$shift)
 		fluidRow(
 			column(
 				2,
@@ -1122,10 +1132,23 @@ server = function(input, output, session) {
 				2,
 				pickerInput(
 					"cause_effect_filters_defect_cat", "Defect Category",
-					modelOptions, modelOptions, multiple = TRUE,
-					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
+					defectsOptions, defectsOptions, multiple = FALSE
 				)
 			)
+		)
+	})
+	output$cause_effect_fish_bone_plot <- renderPlot({
+		plots__trigger$depend()
+		pareto__trigger$depend()
+		plotData <- mainData %>%
+			filter(
+				Family %in% input$cause_effect_filters_family & Cust %in% input$cause_effect_filters_cust &
+				Model %in% input$cause_effect_filters_model & Defects_Category %in% input$cause_effect_filters_defect_cat
+			) %>% select(Family, Cust, Model, Defects_Category, cause)
+		if (nrow(plotData) == 0) return(textPlot())
+		cause.and.effect(
+			cause = fromJSON(plotData$cause[1]),
+			effect = plotData$Defects_Category
 		)
 	})
 }
