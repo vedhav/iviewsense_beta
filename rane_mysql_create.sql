@@ -11,25 +11,6 @@
 /*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
 /*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
 
--- Dumping structure for table rane.defects
-CREATE TABLE IF NOT EXISTS `defects` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `Machine` varchar(45) COLLATE utf8_bin DEFAULT NULL,
-  `Date_Time` varchar(100) COLLATE utf8_bin NOT NULL,
-  `Family` varchar(45) COLLATE utf8_bin DEFAULT NULL,
-  `Cust` varchar(45) COLLATE utf8_bin DEFAULT NULL,
-  `Model` varchar(45) COLLATE utf8_bin DEFAULT NULL,
-  `Stn` varchar(45) COLLATE utf8_bin DEFAULT NULL,
-  `Opr` varchar(45) COLLATE utf8_bin DEFAULT NULL,
-  `defects_category` varchar(45) COLLATE utf8_bin DEFAULT NULL,
-  `defects_qty` varchar(45) COLLATE utf8_bin DEFAULT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
-
--- Dumping data for table rane.defects: 0 rows
-/*!40000 ALTER TABLE `defects` DISABLE KEYS */;
-/*!40000 ALTER TABLE `defects` ENABLE KEYS */;
-
 -- Dumping structure for table rane.testresults
 CREATE TABLE IF NOT EXISTS `testresults` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
@@ -83,6 +64,8 @@ CREATE TABLE IF NOT EXISTS `testresults` (
   `CCW_9` varchar(45) COLLATE utf8_bin DEFAULT NULL,
   `CW_10` varchar(45) COLLATE utf8_bin DEFAULT NULL,
   `CCW_10` varchar(45) COLLATE utf8_bin DEFAULT NULL,
+  `Defects_Category` varchar(45) COLLATE utf8_bin DEFAULT NULL,
+  `cause` json DEFAULT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 

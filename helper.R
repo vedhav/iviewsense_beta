@@ -11,6 +11,17 @@ popUpWindow <- function (popUpText, title = NULL, footer = NULL, easyClose = TRU
 	)
 }
 
+shinyInput <- function(FUN, len, id, ...) {
+    if (len == 0) {
+        return("")
+    }
+    inputs <- character(len)
+    for (i in seq_len(len)) {
+        inputs[i] <- as.character(FUN(paste0(id, i), ...))
+    }
+    inputs
+}
+
 textPlot <- function(text = "No data avaliable", color = "#000000") {
 	plot <- ggplot()+
 		geom_text(aes(x = 0, y = 0, label = text), size = 6, color = color) +
@@ -56,59 +67,45 @@ formatData <- function(data) {
         Machine = machineData
     )
     data <- cbind(idAndMachineData, data)
-    data[, 11:51] <- sapply(data[, 11:51], as.numeric)
-    # data[is.na(data)] <- "NA"
+    data[, numericColumns] <- sapply(data[, numericColumns], as.numeric)
     data$Opr[is.na(data$Opr)] <- "NA"
     data$Date_Time <- as.POSIXct(data$Date_Time)
     data$shift <- getShifts(data$Date_Time)
-    data$Date <- as.Date(data$Date_Time)
+    data$Date <- as.Date(data$Date_Time, tz = "")
     data$Machine <- as.character(data$Machine)
+    data$Defects_Qty <- 1
     return(data)
 }
 
-getCheckSheetData <- function() {
-    data <- selectDbQuery("SELECT * FROM defects")
-    returnData <- data.frame(
-        id = data$id,
-        Machine = data$Machine,
-        Date_Time = data$Date_Time,
-        Date = as.Date(data$Date_Time),
-        Family = data$Family,
-        Model = data$Model,
-        Shift = getShifts(data$Date_Time),
-        Stn = data$Stn,
-        Opr = data$Opr,
-        defects_category = data$defects_category,
-        defects_qty = data$defects_qty,
-        stringsAsFactors = FALSE
-    )
-    return(returnData)
+updateCauseEffectTable <- function(newData) {
+    currentData <- selectDbQuery("SELECT * FROM causeeffect")
+    currentData$all <- paste0(currentData$effect, currentData$Family, currentData$Cust, currentData$Model)
+    newData$all <- paste0(newData$effect, newData$Family, newData$Cust, newData$Model)
+    if (!newData$all %in% currentData$all) {
+        newData$cause <- toJSON(NULL)
+        newData$all <- NULL
+        insert("causeeffect", newData)
+    }
 }
 
-getCheckSheetDataFromFile <- function(data) {
-    returnData <- data.frame(
-        id = data$id,
-        Machine = data$Machine,
-        Date_Time = data$Date_Time,
-        Date = as.Date(data$Date_Time),
-        Family = data$Family,
-        Model = data$Model,
-        Shift = getShifts(data$Date_Time),
-        Stn = data$Stn,
-        Opr = data$Opr,
-        defects_category = "",
-        defects_qty = 1,
-        stringsAsFactors = FALSE
-    )
-    return(returnData)
-}
-
-updateDefectInDB <- function(id, defect_cat) {
+updateDefectInDB <- function(id, defect_cat, causeEffectData) {
+    # print(paste0("UPDATE testresults SET Defects_Category = ", defect_cat, " WHERE id = ", id))
     execute(
-        "UPDATE defects SET defects_category = ? WHERE id = ?",
+        "UPDATE testresults SET Defects_Category = ? WHERE id = ?",
         list(defect_cat, id)
     )
-    print("Defect has been updated!")
+    execute(
+        "UPDATE testresults SET cause = ? WHERE id = ?",
+        list(fishBoneSkeleton, id)
+    )
+    updateCauseEffectTable(causeEffectData)
+}
+
+updateNewCause <- function(id, causeJSON) {
+    execute(
+        'UPDATE testresults SET cause = ? WHERE id = ?',
+        list(causeJSON, id)
+    )
 }
 
 killDbxConnections <- function () {

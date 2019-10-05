@@ -1,5 +1,18 @@
 source("global.R")
 
+cause_effect_body <- bs4TabItem(
+	tabName = "cause_effect",
+	tags$div(
+		fluidPage(
+			fluidRow(
+				column(12, align = "center", style = "font-size: 20px;", "Cause & effect"),
+				column(12, uiOutput("cause_effect_filters")),
+				column(12, plotOutput("cause_effect_fish_bone_plot"))
+			)
+		)
+	)
+)
+
 ui = tags$div(
 	tags$head(
 		tags$link(rel = "shortcut icon", type = "image/png", href = "iviewsense.png")
@@ -81,11 +94,6 @@ ui = tags$div(
 						text = "Cause & effect",
 						tabName = "cause_effect",
 						icon = "balance-scale"
-					),
-					bs4SidebarMenuItem(
-						text = "Check sheet",
-						tabName = "check_sheet",
-						icon = "check"
 					)
 				)
 			),
@@ -97,8 +105,7 @@ ui = tags$div(
 					histogram_body,
 					scatter_plot_body,
 					pareto_body,
-					cause_effect_body,
-					check_sheet_body
+					cause_effect_body
 				)
 			)
 		)
@@ -106,19 +113,14 @@ ui = tags$div(
 )
 
 server = function(input, output, session) {
-	# mainData <- read_xlsx("Geartek.xlsx", sheet = 1, col_names = TRUE)
-	# mainData <- formatData(mainData)
-	# minDate <- as.Date(min(mainData$Date_Time))
-	# maxDate <- as.Date(max(mainData$Date_Time))
-	# familyOptions <- unique(mainData$Family)
-	# custOptions <- unique(mainData$Cust)
-	# modelOptions <- unique(mainData$Model)
-	# resultOptions <- unique(mainData$Result)
-	# operatorOptions <- unique(mainData$Opr)
-	# machineOptions <- unique(mainData$Machine)
 	mainData <- data.frame()
-	checkSheetData <- data.frame()
 	checkSheetTableData <- data.frame()
+	hasDbConnection <- FALSE
+	causeEffectToken <- 0
+	stratificationTable <- data.frame()
+	checkSheetFilterData <- data.frame()
+	checkSheetFilterDataDisplay <- data.frame()
+	checkSheetCreateData <- data.frame()
 	observeEvent(input$remote_or_local, {
 		output$data_source_body_ui <- renderUI({
 			if (input$remote_or_local %% 2 == 0) {
@@ -143,15 +145,15 @@ server = function(input, output, session) {
 			} else {
 				ui <- HTML("The data from MySQL database will be used for analysis!")
 				mainData <<- selectDbQuery("SELECT * FROM testresults") %>% formatData()
-				minDate <<- as.Date(min(mainData$Date_Time))
-				maxDate <<- as.Date(max(mainData$Date_Time))
+				minDate <<- as.Date(min(mainData$Date_Time), tz = "")
+				maxDate <<- as.Date(max(mainData$Date_Time), tz = "")
 				familyOptions <<- unique(mainData$Family)
 				custOptions <<- unique(mainData$Cust)
 				modelOptions <<- unique(mainData$Model)
 				resultOptions <<- unique(mainData$Result)
 				operatorOptions <<- unique(mainData$Opr)
 				machineOptions <<- unique(mainData$Machine)
-				checkSheetData <<- getCheckSheetData()
+				hasDbConnection <<- TRUE
 				plots__trigger$trigger()
 			}
 			return(ui)
@@ -168,15 +170,17 @@ server = function(input, output, session) {
 			return()
 		}
 		mainData <<- formatData(mainData)
-		minDate <<- as.Date(min(mainData$Date_Time))
-		maxDate <<- as.Date(max(mainData$Date_Time))
+		minDate <<- as.Date(min(mainData$Date_Time), tz = "")
+		maxDate <<- as.Date(max(mainData$Date_Time), tz = "")
 		familyOptions <<- unique(mainData$Family)
 		custOptions <<- unique(mainData$Cust)
 		modelOptions <<- unique(mainData$Model)
 		resultOptions <<- unique(mainData$Result)
 		operatorOptions <<- unique(mainData$Opr)
 		machineOptions <<- unique(mainData$Machine)
-		checkSheetData <<- getCheckSheetDataFromFile(mainData)
+		mainData$Defects_Category <<- ""
+		mainData$Defects_Qty <<- "1"
+		hasDbConnection <<- FALSE
 		plots__trigger$trigger()
 	})
 
@@ -286,8 +290,9 @@ server = function(input, output, session) {
 		}
 		plot_variable <- plotData[[input$histogram_column]]
 		plot_variable <- plot_variable[!is.na(plot_variable)]
-		lslValue <- round(mean(plot_variable) - 3 * sd(plot_variable), 2)
-		uslValue <- round(mean(plot_variable) + 3 * sd(plot_variable), 2)
+		outPlot <- qcc(plot_variable, type = "xbar.one", plot = FALSE)
+		lslValue <- round(outPlot$limits[1], 2)
+		uslValue <- round(outPlot$limits[2], 2)
 		updateNumericInput(
 			session, "histogram_lsl", value = lslValue
 			# label = HTML(paste0("Enter the LCL (mean - 3 x sd = ", lslValue, ")"))
@@ -620,12 +625,12 @@ server = function(input, output, session) {
 		lslValue <- round(outPlot$limits[1], 2)
 		uslValue <- round(outPlot$limits[2], 2)
 		updateNumericInput(
-			session, "control_chart_r_lcl", value = lslValue,
-			label = HTML(paste0("Enter the LCL (mean - 3 x sd = ", lslValue, ")"))
+			session, "control_chart_r_lcl", value = lslValue
+			# label = HTML(paste0("Enter the LCL (mean - 3 x sd = ", lslValue, ")"))
 		)
 		updateNumericInput(
-			session, "control_chart_r_ucl", value = uslValue,
-			label = HTML(paste0("Enter the UCL (mean + 3 x sd = ", uslValue, ")"))
+			session, "control_chart_r_ucl", value = uslValue
+			# label = HTML(paste0("Enter the UCL (mean + 3 x sd = ", uslValue, ")"))
 		)
 		output$control_chart_plot_xbar_r <- renderPlot({
 			plots__trigger$depend()
@@ -717,17 +722,17 @@ server = function(input, output, session) {
 			summarise(passCount = sum(hasPassed), failCount = n() - passCount) %>%
 			ungroup() %>% select(Family, Cust, shift, passCount, Model, Opr, DayOfWeek, failCount)
 		shiftPlotData <- passCountData %>% group_by(shift) %>%
-			summarise(pass_percentage = round(sum(passCount) / (sum(passCount) + sum(failCount)) * 100, 1))
+			summarise(fif_percentage = round(100 - sum(passCount) / (sum(passCount) + sum(failCount)) * 100, 1))
 		familyPlotData <- passCountData %>% group_by(Family) %>%
-			summarise(pass_percentage = round(sum(passCount) / (sum(passCount) + sum(failCount)) * 100, 1))
+			summarise(fif_percentage = round(100 - sum(passCount) / (sum(passCount) + sum(failCount)) * 100, 1))
 		customerPlotData <- passCountData %>% group_by(Cust) %>%
-			summarise(pass_percentage = round(sum(passCount) / (sum(passCount) + sum(failCount)) * 100, 1))
+			summarise(fif_percentage = round(100 - sum(passCount) / (sum(passCount) + sum(failCount)) * 100, 1))
 		modelPlotData <- passCountData %>% group_by(Model) %>%
-			summarise(pass_percentage = round(sum(passCount) / (sum(passCount) + sum(failCount)) * 100, 1))
+			summarise(fif_percentage = round(100 - sum(passCount) / (sum(passCount) + sum(failCount)) * 100, 1))
 		operatorPlotData <- passCountData %>% group_by(Opr) %>%
-			summarise(pass_percentage = round(sum(passCount) / (sum(passCount) + sum(failCount)) * 100, 1))
+			summarise(fif_percentage = round(100 - sum(passCount) / (sum(passCount) + sum(failCount)) * 100, 1))
 		dayOfWeekPlotData <- passCountData %>% group_by(DayOfWeek) %>%
-			summarise(pass_percentage = round(sum(passCount) / (sum(passCount) + sum(failCount)) * 100, 1))
+			summarise(fif_percentage = round(100 - sum(passCount) / (sum(passCount) + sum(failCount)) * 100, 1))
 		output$stratification_shift <- renderPlotly({
 			req(input$stratification_filters_date_from)
 			req(input$stratification_filters_date_to)
@@ -738,14 +743,14 @@ server = function(input, output, session) {
 			if (nrow(shiftPlotData) == 0) return(ggplotly(textPlot()))
 			plot_ly(
 				data = shiftPlotData,
-				x = ~pass_percentage,
-				y = reorder(shiftPlotData$shift, shiftPlotData$pass_percentage),
+				x = ~fif_percentage,
+				y = reorder(shiftPlotData$shift, shiftPlotData$fif_percentage),
 				type = "bar", orientation = 'h',
 				hovertemplate = paste(
 					"<i>%{y}'s Pass percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
 				)
 			) %>% layout(
-				title = "% of Pass across different Shifts",
+				title = "% of FTF across different Shifts",
 				xaxis = list(visible = FALSE)
 			) %>% config(displayModeBar = FALSE)
 		})
@@ -759,14 +764,14 @@ server = function(input, output, session) {
 			if (nrow(familyPlotData) == 0) return(ggplotly(textPlot()))
 			plot_ly(
 				data = familyPlotData,
-				x = ~pass_percentage,
-				y = reorder(familyPlotData$Family, familyPlotData$pass_percentage),
+				x = ~fif_percentage,
+				y = reorder(familyPlotData$Family, familyPlotData$fif_percentage),
 				type = "bar", orientation = 'h',
 				hovertemplate = paste(
 					"<i>%{y}'s Pass percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
 				)
 			) %>% layout(
-				title = "% of Pass across different Families",
+				title = "% of FTF across different Families",
 				xaxis = list(visible = FALSE)
 			) %>% config(displayModeBar = FALSE)
 		})
@@ -780,14 +785,14 @@ server = function(input, output, session) {
 			if (nrow(customerPlotData) == 0) return(ggplotly(textPlot()))
 			plot_ly(
 				data = customerPlotData,
-				x = ~pass_percentage,
-				y = reorder(customerPlotData$Cust, customerPlotData$pass_percentage),
+				x = ~fif_percentage,
+				y = reorder(customerPlotData$Cust, customerPlotData$fif_percentage),
 				type = "bar", orientation = 'h',
 				hovertemplate = paste(
 					"<i>%{y}'s Pass percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
 				)
 			) %>% layout(
-				title = "% of Pass across different Customers",
+				title = "% of FTF across different Customers",
 				xaxis = list(visible = FALSE)
 			) %>% config(displayModeBar = FALSE)
 		})
@@ -801,14 +806,14 @@ server = function(input, output, session) {
 			if (nrow(modelPlotData) == 0) return(ggplotly(textPlot()))
 			plot_ly(
 				data = modelPlotData,
-				x = ~pass_percentage,
-				y = reorder(modelPlotData$Model, modelPlotData$pass_percentage),
+				x = ~fif_percentage,
+				y = reorder(modelPlotData$Model, modelPlotData$fif_percentage),
 				type = "bar", orientation = 'h',
 				hovertemplate = paste(
 					"<i>%{y}'s Pass percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
 				)
 			) %>% layout(
-				title = "% of Pass across different Models",
+				title = "% of FTF across different Models",
 				xaxis = list(visible = FALSE)
 			) %>% config(displayModeBar = FALSE)
 		})
@@ -822,14 +827,14 @@ server = function(input, output, session) {
 			if (nrow(operatorPlotData) == 0) return(ggplotly(textPlot()))
 			plot_ly(
 				data = operatorPlotData,
-				x = ~pass_percentage,
-				y = reorder(operatorPlotData$Opr, operatorPlotData$pass_percentage),
+				x = ~fif_percentage,
+				y = reorder(operatorPlotData$Opr, operatorPlotData$fif_percentage),
 				type = "bar", orientation = 'h',
 				hovertemplate = paste(
 					"<i>%{y}'s Pass percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
 				)
 			) %>% layout(
-				title = "% of Pass across different Operators",
+				title = "% of FTF across different Operators",
 				xaxis = list(visible = FALSE)
 			) %>% config(displayModeBar = FALSE)
 		})
@@ -843,14 +848,14 @@ server = function(input, output, session) {
 			if (nrow(dayOfWeekPlotData) == 0) return(ggplotly(textPlot()))
 			plot_ly(
 				data = dayOfWeekPlotData,
-				x = ~pass_percentage,
-				y = reorder(dayOfWeekPlotData$DayOfWeek, dayOfWeekPlotData$pass_percentage),
+				x = ~fif_percentage,
+				y = reorder(dayOfWeekPlotData$DayOfWeek, dayOfWeekPlotData$fif_percentage),
 				type = "bar", orientation = 'h',
 				hovertemplate = paste(
 					"<i>%{y}'s Pass percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
 				)
 			) %>% layout(
-				title = "% of Pass across different days of the week"
+				title = "% of FTF across different days of the week"
 			) %>% config(displayModeBar = FALSE)
 		})
 		shiftOneData <- constFields %>% left_join(unformattedData %>% filter(shift == shiftNames[1]), by = c("Family", "Cust")) %>%
@@ -859,66 +864,292 @@ server = function(input, output, session) {
 			arrange(Family, Cust) %>% select(Pass = passCount, Fail = failCount)
 		shiftThreeData <- constFields %>% left_join(unformattedData %>% filter(shift == shiftNames[3]), by = c("Family", "Cust")) %>%
 			arrange(Family, Cust) %>% select(Pass = passCount, Fail = failCount)
-		tableData <- cbind(shiftOneData, shiftTwoData, shiftThreeData)
-		kable(tableData, "html") %>%
+		observeButton <- data.frame(
+			"Edit Checksheet" = shinyInput(actionButton, nrow(shiftOneData), 'button_', label = "check sheet", onclick = 'Shiny.setInputValue(\"navigate_check_sheet\", this.id, {priority: \"event\"})')
+		)
+		stratificationTable <<- cbind(shiftOneData, shiftTwoData, shiftThreeData, observeButton)
+		kable(stratificationTable, "html", escape = FALSE) %>%
 			kable_styling("striped", full_width = F) %>%
-			add_header_above(c(" " = 2, "Shift 1" = 2, "Shift 2" = 2, "Shift 3" = 2))
+			add_header_above(c(" " = 2, "Shift 1" = 2, "Shift 2" = 2, "Shift 3" = 2, " " = 1))
 	}
 
-	output$headerText <- renderText({
-		plots__trigger$depend()
-		paste0("Total Fails: ", nrow(checkSheetData))
-	})
-	output$check_sheet_table <- renderDT({
-		plots__trigger$depend()
-		if (nrow(checkSheetData) == 0) return(data.frame())
-		checkSheetTableData <<- checkSheetData %>%
-			select(Date, Shift, Model, "Defects Category" = defects_category, "Defects Qty" = defects_qty)
-		datatable(
-			checkSheetTableData,
-			rownames = FALSE,
-			editable = TRUE,
-			class = "cell-border stripe",
-			options = list(
-				pageLength = 20
-			)
+	observeEvent(input$navigate_check_sheet, {
+		selectedRow <- as.numeric(strsplit(input$navigate_check_sheet, "_")[[1]][2])
+		selectedData <- stratificationTable[selectedRow,]
+		familyFilter <- selectedData$Family
+		CustomerFilter <- selectedData$Cust
+		fromDateFilter <- input$stratification_filters_date_from
+		toDateFilter <- input$stratification_filters_date_to
+		modelFilter <- input$stratification_filters_model
+		operatorFilter <- input$stratification_filters_operator
+		checkSheetFilterData <<- mainData %>% filter(
+			Family %in% familyFilter & Cust %in% CustomerFilter & Date >= fromDateFilter &
+			Date <= toDateFilter & Model %in% modelFilter & operatorFilter %in% operatorFilter &
+			Result == failName
 		)
+		checkSheetFilterDataDisplay <<- checkSheetFilterData %>%
+			select(Date, shift, Model, "Defects Category" = Defects_Category) %>% mutate("Defects Quantity" = 1)
+		output$check_sheet_table_ui <- renderDT({
+			datatable(
+				checkSheetFilterDataDisplay,
+				rownames = FALSE,
+				editable = TRUE,
+				class = "cell-border stripe",
+				options = list(dom = 'tip')
+			)
+		})
+		tableOutputProxy <- dataTableProxy("check_sheet_table_ui")
+		observeEvent(input$check_sheet_table_ui_cell_edit, {
+			info = input$check_sheet_table_ui_cell_edit
+			if (!info$value %in% defectsCategories) {
+				replaceData(tableOutputProxy, checkSheetFilterDataDisplay, resetPaging = FALSE, rownames = FALSE)
+				return()
+			}
+			if (info$col == 3) {
+				row_id <- checkSheetFilterData[info$row, "id"]
+				causeEffectData <- data.frame(
+					effect = info$value,
+					Family = checkSheetFilterData[info$row, "Family"],
+					Cust = checkSheetFilterData[info$row, "Cust"],
+					Model = checkSheetFilterData[info$row, "Model"]
+				)
+				if (hasDbConnection) updateDefectInDB(id = row_id, defect_cat = info$value, causeEffectData)
+				checkSheetFilterData$Defects_Category[checkSheetFilterData$id == row_id] <<- info$value
+				checkSheetFilterDataDisplay[info$row, "Defects Category"] <<- info$value
+				mainData[mainData$id == row_id, "Defects_Category"] <<- info$value
+				mainData[mainData$id == row_id, "cause"] <<- fishBoneSkeleton
+				plotData <- mainData %>% filter(Defects_Category %in% defectsCategories)
+				pareto__trigger$trigger()
+				replaceData(tableOutputProxy, checkSheetFilterDataDisplay, resetPaging = FALSE, rownames = FALSE)
+			} else {
+				replaceData(tableOutputProxy, checkSheetFilterDataDisplay, resetPaging = FALSE, rownames = FALSE)
+			}
+		})
+		showModal(
+            modalDialog(
+                title = "Check Sheet",
+                size = "l",
+                fluidPage(
+                    align = "center",
+                    fluidRow(
+                    	HTML(
+                    		paste0(
+								"<b>Please enter the Defects category from one of these values:</b><br>",
+								paste(defectsCategories, collapse = ", ")
+							)
+                    	)
+                    ),
+                    fluidRow(DTOutput("check_sheet_table_ui"))
+                ),
+                footer = NULL,
+                easyClose = TRUE
+            )
+        )
 	})
-	tableOutputProxy <- dataTableProxy("check_sheet_table")
-	observeEvent(input$check_sheet_table_cell_edit, {
-		info = input$check_sheet_table_cell_edit
-		if (!info$value %in% defectsCategories) {
-			popUpWindow(
-				paste0(
-					"<b>Please enter the Defects category from one of these values:</b><br><br>",
-					paste(defectsCategories, collapse = ", ")
+
+	output$pareto_filters <- renderUI({
+		plots__trigger$depend()
+		pareto__trigger$depend()
+		tableData <- mainData %>% filter(Defects_Category %in% defectsCategories)
+		if (nrow(tableData) == 0) return()
+		defectsList <- unique(tableData$Defects_Category)
+		familyList <- unique(tableData$Family)
+		customerList <- unique(tableData$Cust)
+		modelList <- unique(tableData$Model)
+		shiftList <- unique(tableData$shift)
+		fluidRow(
+			column(1, ""),
+			column(
+				2,
+				pickerInput(
+					"pareto_filters_defects", "Defects",
+					defectsList, defectsList, multiple = TRUE,
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
+				)
+			),
+			column(
+				2,
+				pickerInput(
+					"pareto_filters_family", "Family",
+					familyList, familyList, multiple = TRUE,
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
+				)
+			),
+			column(
+				2,
+				pickerInput(
+					"pareto_filters_customer", "Customer",
+					customerList, customerList, multiple = TRUE,
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
+				)
+			),
+			column(
+				2,
+				pickerInput(
+					"pareto_filters_model", "Model",
+					modelList, modelList, multiple = TRUE,
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
+				)
+			),
+			column(
+				2,
+				pickerInput(
+					"pareto_filters_shift", "Shift",
+					shiftList, shiftList, multiple = TRUE,
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
 				)
 			)
-			replaceData(tableOutputProxy, checkSheetTableData, resetPaging = FALSE, rownames = FALSE)
-			return()
-		}
-		if (info$col == 3) {
-			row_id <- checkSheetData[info$row, "id"]
-			updateDefectInDB(id = row_id, defect_cat = info$value)
-			checkSheetData$defects_category[checkSheetData$id == row_id] <<- info$value
-			checkSheetTableData[info$row, "Defects Category"] <<- info$value
-			pareto__trigger$trigger()
-			replaceData(tableOutputProxy, checkSheetTableData, resetPaging = FALSE, rownames = FALSE)
-		} else {
-			replaceData(tableOutputProxy, checkSheetTableData, resetPaging = FALSE, rownames = FALSE)
-		}
+		)
 	})
 	output$pareto_plot <- renderPlot({
 		plots__trigger$depend()
 		pareto__trigger$depend()
-		if (nrow(checkSheetData) == 0) return(textPlot())
-		plotData <- checkSheetData %>% filter(defects_category %in% defectsCategories)
-		if (nrow(plotData) == 0) return(textPlot("Please enter Defects Category in the Check sheet to get the Pareto chart"))
-		plotData$defects_qty <- as.numeric(plotData$defects_qty)
-		plotData <- plotData %>% group_by(defects_category) %>% summarise(count_defects = sum(defects_qty)) %>% ungroup()
+		plotData <- mainData %>% filter(Defects_Category %in% defectsCategories)
+		if (nrow(plotData) == 0) return(textPlot("Please add Defects from the Stratification tab to get the Pareto chart"))
+		plotData <- plotData %>%
+			filter(
+				Defects_Category %in% input$pareto_filters_defects & Family %in% input$pareto_filters_family &
+				Cust %in% input$pareto_filters_customer & Model %in% input$pareto_filters_model &
+				shift %in% input$pareto_filters_shift
+			)
+		if (nrow(plotData) == 0) return(textPlot())
+		plotData$Defects_Qty <- as.numeric(plotData$Defects_Qty)
+		plotData <- plotData %>% group_by(Defects_Category) %>% summarise(count_defects = sum(Defects_Qty)) %>% ungroup()
 		defect <- plotData$count_defects
-		names(defect) <- plotData$defects_category
-		pareto.chart(defect, ylab = "Error frequency")
+		names(defect) <- plotData$Defects_Category
+		pareto.chart(defect, ylab = "Frequency of defects")
+	})
+	output$pareto_tables <- renderDT({
+		plots__trigger$depend()
+		pareto__trigger$depend()
+		if (!hasDbConnection) {
+			filterData <- mainData %>%
+				filter(
+					Defects_Category %in% input$pareto_filters_defects & Family %in% input$pareto_filters_family &
+					Cust %in% input$pareto_filters_customer & Model %in% input$pareto_filters_model &
+					shift %in% input$pareto_filters_shift
+				)
+			if (nrow(filterData) == 0) return(data.frame())
+			tableData <- filterData %>% select(Defects_Category, Family, Cust, Model, shift)
+			return(
+				datatable(
+					tableData,
+					rownames = FALSE,
+					editable = TRUE,
+					class = "cell-border stripe",
+					options = list(dom = 'tip')
+				)
+			)
+		} else {
+			causeEffectData <- mainData %>%
+				filter(
+					Defects_Category %in% input$pareto_filters_defects & Family %in% input$pareto_filters_family &
+					Cust %in% input$pareto_filters_customer & Model %in% input$pareto_filters_model &
+					shift %in% input$pareto_filters_shift
+				) %>%
+				select(
+					id, Date, Shift = shift, Machine, Customer = Cust, Family, Model,
+					"Defect Category" = Defects_Category, cause
+				)
+			if (nrow(causeEffectData) == 0) return(data.frame())
+			leftData <- causeEffectData %>% select(-c(cause))
+			outData <- data.frame()
+			for (i in 1:nrow(causeEffectData)) {
+				causeFromJson <- fromJSON(causeEffectData$cause[i]) %>%
+					arrange(Man_Cause, Method_Cause, Machine_Cause, Material_Cause, Measurement_Cause, Environment_Cause)
+				causeFromJson <- causeFromJson[
+					order(causeFromJson$Man_Cause, causeFromJson$Method_Cause,
+						causeFromJson$Machine_Cause, causeFromJson$Material_Cause,
+						causeFromJson$Measurement_Cause, causeFromJson$Environment_Cause, decreasing = TRUE),
+				]
+				causeFromJson$id = causeEffectData$id[i]
+				outData <- outData %>% rbind(left_join(leftData, causeFromJson, by = "id"))
+			}
+			checkSheetCreateData <<- outData[complete.cases(outData),]
+			return(
+				datatable(
+					checkSheetCreateData,
+					rownames = FALSE,
+					editable = TRUE,
+					class = "cell-border stripe",
+					options = list(dom = 'tip')
+				)
+			)
+		}
+	})
+	checkSheetTableOutputProxy <- dataTableProxy("pareto_tables")
+	observeEvent(input$pareto_tables_cell_edit, {
+		info = input$pareto_tables_cell_edit
+		if (!hasDbConnection | info$col < 8) {
+			replaceData(checkSheetTableOutputProxy, checkSheetCreateData, resetPaging = FALSE, rownames = FALSE)
+			return()
+		} else {
+			checkSheetCreateData[info$row, info$col + 1] <<- info$value
+			updateId <- checkSheetCreateData[info$row, "id"]
+			updateData <- checkSheetCreateData %>% filter(id == updateId) %>%
+				select(Man_Cause, Method_Cause, Machine_Cause, Material_Cause, Measurement_Cause, Environment_Cause)
+			updateCause <- toJSON(updateData)
+			updateNewCause(updateId, updateCause)
+		}
+	})
+
+	output$cause_effect_filters <- renderUI({
+		plots__trigger$depend()
+		pareto__trigger$depend()
+		tableData <- mainData %>% filter(Defects_Category %in% defectsCategories)
+		if (nrow(tableData) == 0) return()
+		defectsOptions <- unique(tableData$Defects_Category)
+		familyOptions <- unique(tableData$Family)
+		custOptions <- unique(tableData$Cust)
+		modelOptions <- unique(tableData$Model)
+		shiftList <- unique(tableData$shift)
+		fluidRow(
+			column(
+				2,
+				pickerInput(
+					"cause_effect_filters_family", "Family",
+					familyOptions, familyOptions, multiple = TRUE,
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
+				)
+			),
+			column(
+				2,
+				pickerInput(
+					"cause_effect_filters_cust", "Customer",
+					custOptions, custOptions, multiple = TRUE,
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
+				)
+			),
+			column(
+				2,
+				pickerInput(
+					"cause_effect_filters_model", "Model",
+					modelOptions, modelOptions, multiple = TRUE,
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
+				)
+			),
+			column(
+				2,
+				pickerInput(
+					"cause_effect_filters_defect_cat", "Defect Category",
+					defectsOptions, defectsOptions, multiple = FALSE
+				)
+			)
+		)
+	})
+	output$cause_effect_fish_bone_plot <- renderPlot({
+		plots__trigger$depend()
+		pareto__trigger$depend()
+		plotData <- mainData %>%
+			filter(
+				Family %in% input$cause_effect_filters_family & Cust %in% input$cause_effect_filters_cust &
+				Model %in% input$cause_effect_filters_model & Defects_Category %in% input$cause_effect_filters_defect_cat
+			) %>% select(Family, Cust, Model, Defects_Category, cause)
+		if (nrow(plotData) == 0) return(textPlot())
+		cause.and.effect(
+			cause = fromJSON(plotData$cause[1]),
+			effect = plotData$Defects_Category
+		)
 	})
 }
 

@@ -117,7 +117,9 @@ pareto_body <- bs4TabItem(
 		fluidPage(
 			fluidRow(
 				column(12, align = "center", style = "font-size: 20px;", "Pareto"),
-				column(12, plotOutput("pareto_plot"))
+				column(12, align = "center", uiOutput("pareto_filters")),
+				column(12, plotOutput("pareto_plot")),
+				column(12, DTOutput("pareto_tables"))
 			)
 		)
 	)
@@ -131,20 +133,6 @@ cause_effect_body <- bs4TabItem(
 			fluidRow(
 				column(12, align = "center", style = "font-size: 20px;", "Cause & effect"),
 				column(12, align = "center", "still under development!")
-			)
-		)
-	)
-)
-
-
-check_sheet_body <- bs4TabItem(
-	tabName = "check_sheet",
-	tags$div(
-		fluidPage(
-			fluidRow(
-				column(12, align = "center", style = "font-size: 20px;", "Check sheet"),
-				column(12, textOutput("headerText")),
-				column(12, DTOutput("check_sheet_table"))
 			)
 		)
 	)
