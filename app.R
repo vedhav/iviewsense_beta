@@ -119,6 +119,7 @@ server = function(input, output, session) {
 	stratificationTable <- data.frame()
 	checkSheetFilterData <- data.frame()
 	checkSheetFilterDataDisplay <- data.frame()
+	checkSheetCreateData <- data.frame()
 	observeEvent(input$remote_or_local, {
 		output$data_source_body_ui <- renderUI({
 			if (input$remote_or_local %% 2 == 0) {
@@ -886,7 +887,7 @@ server = function(input, output, session) {
 			Result == failName
 		)
 		checkSheetFilterDataDisplay <<- checkSheetFilterData %>%
-			select(Date, shift, Model, "Defects Category" = Defects_Category, "Defects Quantity" = Defects_Qty)
+			select(Date, shift, Model, "Defects Category" = Defects_Category) %>% mutate("Defects Quantity" = 1)
 		output$check_sheet_table_ui <- renderDT({
 			datatable(
 				checkSheetFilterDataDisplay,
@@ -915,6 +916,7 @@ server = function(input, output, session) {
 				checkSheetFilterData$Defects_Category[checkSheetFilterData$id == row_id] <<- info$value
 				checkSheetFilterDataDisplay[info$row, "Defects Category"] <<- info$value
 				mainData[mainData$id == row_id, "Defects_Category"] <<- info$value
+				mainData[mainData$id == row_id, "cause"] <<- fishBoneSkeleton
 				plotData <- mainData %>% filter(Defects_Category %in% defectsCategories)
 				pareto__trigger$trigger()
 				replaceData(tableOutputProxy, checkSheetFilterDataDisplay, resetPaging = FALSE, rownames = FALSE)
@@ -1038,21 +1040,55 @@ server = function(input, output, session) {
 				)
 			)
 		} else {
-			causeEffectData <- selectDbQuery("SELECT * FROM causeeffect")
-			filterData <- causeEffectData %>%
+			causeEffectData <- mainData %>%
 				filter(
-					effect %in% input$pareto_filters_defects & Family %in% input$pareto_filters_family &
-					Cust %in% input$pareto_filters_customer & Model %in% input$pareto_filters_model
+					Defects_Category %in% input$pareto_filters_defects & Family %in% input$pareto_filters_family &
+					Cust %in% input$pareto_filters_customer & Model %in% input$pareto_filters_model &
+					shift %in% input$pareto_filters_shift
+				) %>%
+				select(
+					id, Date, Shift = shift, Machine, Customer = Cust, Family, Model,
+					"Defect Category" = Defects_Category, cause
 				)
+			if (nrow(causeEffectData) == 0) return(data.frame())
+			leftData <- causeEffectData %>% select(-c(cause))
+			outData <- data.frame()
+			for (i in 1:nrow(causeEffectData)) {
+				causeFromJson <- fromJSON(causeEffectData$cause[i]) %>%
+					arrange(Man_Cause, Method_Cause, Machine_Cause, Material_Cause, Measurement_Cause, Environment_Cause)
+				causeFromJson <- causeFromJson[
+					order(causeFromJson$Man_Cause, causeFromJson$Method_Cause,
+						causeFromJson$Machine_Cause, causeFromJson$Material_Cause,
+						causeFromJson$Measurement_Cause, causeFromJson$Environment_Cause, decreasing = TRUE),
+				]
+				causeFromJson$id = causeEffectData$id[i]
+				outData <- outData %>% rbind(left_join(leftData, causeFromJson, by = "id"))
+			}
+			checkSheetCreateData <<- outData[complete.cases(outData),]
 			return(
 				datatable(
-					filterData,
+					checkSheetCreateData,
 					rownames = FALSE,
 					editable = TRUE,
 					class = "cell-border stripe",
 					options = list(dom = 'tip')
 				)
 			)
+		}
+	})
+	checkSheetTableOutputProxy <- dataTableProxy("pareto_tables")
+	observeEvent(input$pareto_tables_cell_edit, {
+		info = input$pareto_tables_cell_edit
+		if (!hasDbConnection | info$col < 8) {
+			replaceData(checkSheetTableOutputProxy, checkSheetCreateData, resetPaging = FALSE, rownames = FALSE)
+			return()
+		} else {
+			checkSheetCreateData[info$row, info$col + 1] <<- info$value
+			updateId <- checkSheetCreateData[info$row, "id"]
+			updateData <- checkSheetCreateData %>% filter(id == updateId) %>%
+				select(Man_Cause, Method_Cause, Machine_Cause, Material_Cause, Measurement_Cause, Environment_Cause)
+			updateCause <- toJSON(updateData)
+			updateNewCause(updateId, updateCause)
 		}
 	})
 

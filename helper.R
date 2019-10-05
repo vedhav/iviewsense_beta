@@ -73,6 +73,7 @@ formatData <- function(data) {
     data$shift <- getShifts(data$Date_Time)
     data$Date <- as.Date(data$Date_Time, tz = "")
     data$Machine <- as.character(data$Machine)
+    data$Defects_Qty <- 1
     return(data)
 }
 
@@ -93,7 +94,18 @@ updateDefectInDB <- function(id, defect_cat, causeEffectData) {
         "UPDATE testresults SET Defects_Category = ? WHERE id = ?",
         list(defect_cat, id)
     )
+    execute(
+        "UPDATE testresults SET cause = ? WHERE id = ?",
+        list(fishBoneSkeleton, id)
+    )
     updateCauseEffectTable(causeEffectData)
+}
+
+updateNewCause <- function(id, causeJSON) {
+    execute(
+        'UPDATE testresults SET cause = ? WHERE id = ?',
+        list(causeJSON, id)
+    )
 }
 
 killDbxConnections <- function () {

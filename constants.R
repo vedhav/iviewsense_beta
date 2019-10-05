@@ -56,6 +56,18 @@ defectsCategories <<- c(
 	"Rimand Web Cracks", "Case-Core Seperation"
 )
 
+emptyVector <- c(rep("", 10))
+fishBoneSkeleton <<- toJSON(
+	data.frame(
+		Man_Cause = emptyVector,
+		Method_Cause = emptyVector,
+		Machine_Cause = emptyVector,
+		Material_Cause = emptyVector,
+		Measurement_Cause = emptyVector,
+		Environment_Cause = emptyVector
+	)
+)
+
 minDate <<- NULL
 maxDate <<- NULL
 familyOptions <- NULL
