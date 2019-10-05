@@ -1017,21 +1017,43 @@ server = function(input, output, session) {
 		pareto.chart(defect, ylab = "Frequency of defects")
 	})
 	output$pareto_tables <- renderDT({
-		filterData <- mainData %>%
-			filter(
-				Defects_Category %in% input$pareto_filters_defects & Family %in% input$pareto_filters_family &
-				Cust %in% input$pareto_filters_customer & Model %in% input$pareto_filters_model &
-				shift %in% input$pareto_filters_shift
+		plots__trigger$depend()
+		pareto__trigger$depend()
+		if (!hasDbConnection) {
+			filterData <- mainData %>%
+				filter(
+					Defects_Category %in% input$pareto_filters_defects & Family %in% input$pareto_filters_family &
+					Cust %in% input$pareto_filters_customer & Model %in% input$pareto_filters_model &
+					shift %in% input$pareto_filters_shift
+				)
+			if (nrow(filterData) == 0) return(data.frame())
+			tableData <- filterData %>% select(Defects_Category, Family, Cust, Model, shift)
+			return(
+				datatable(
+					tableData,
+					rownames = FALSE,
+					editable = TRUE,
+					class = "cell-border stripe",
+					options = list(dom = 'tip')
+				)
 			)
-		if (nrow(filterData) == 0) return(data.frame())
-		tableData <- filterData %>% select(Defects_Category, Family, Cust, Model, shift)
-		datatable(
-			tableData,
-			rownames = FALSE,
-			editable = TRUE,
-			class = "cell-border stripe",
-			options = list(dom = 'tip')
-		)
+		} else {
+			causeEffectData <- selectDbQuery("SELECT * FROM causeeffect")
+			filterData <- causeEffectData %>%
+				filter(
+					effect %in% input$pareto_filters_defects & Family %in% input$pareto_filters_family &
+					Cust %in% input$pareto_filters_customer & Model %in% input$pareto_filters_model
+				)
+			return(
+				datatable(
+					filterData,
+					rownames = FALSE,
+					editable = TRUE,
+					class = "cell-border stripe",
+					options = list(dom = 'tip')
+				)
+			)
+		}
 	})
 
 	output$cause_effect_filters <- renderUI({
