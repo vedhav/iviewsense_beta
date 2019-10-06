@@ -16,7 +16,8 @@
 ## Prerequisite to installation
 
 - You have to install R in your computer https://cran.r-project.org/bin/windows/base/
-- Once R is installed it will be presend in a folder like C:\Program Files\R\R-3.6.1\bin. Please add this to the Envirnment path variable.
+- Once R is installed it will be present in a folder like C:\Program Files\R\R-3.6.1\bin.<br>
+Please add this to the Envirnment path variable.<br>
 Refer https://www.architectryan.com/2018/03/17/add-to-the-path-on-windows-10/
 - Make sure you have installed these packages by running this command in R.
 ```
@@ -34,7 +35,7 @@ install.packages(
 ## Installation
 
 - Please make sure that the prerequisite to the installation is done
-- Copy all the contents of this folder to a place you'd like
+- Copy all the contents of a folder of your choice
 - Run "installer.bat" This should install your program.
 - To open the program double click shinyShortcut.vbs
 - You can create a shortcut to shinyShortcut.vbs anywhere to open this application
