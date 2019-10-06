@@ -38,28 +38,6 @@ data_source_body <- bs4TabItem(
 )
 
 
-stratification_body <- bs4TabItem(
-	tabName = "stratification",
-	tags$div(
-		fluidPage(
-			fluidRow(
-				column(12, align = "center", style = "font-size: 20px;", "Stratification"),
-				column(12, align = "center", uiOutput("stratification_filters")),
-				column(12, align = "center", tableOutput("stratification_table")),
-				column(12, br()),
-				column(4, plotlyOutput("stratification_shift")),
-				column(4, plotlyOutput("stratification_family")),
-				column(4, plotlyOutput("stratification_customer")),
-				column(12, br()),
-				column(4, plotlyOutput("stratification_model")),
-				column(4, plotlyOutput("stratification_operator")),
-				column(4, plotlyOutput("stratification_day_of_week"))
-			)
-		)
-	)
-)
-
-
 control_chart_body <- bs4TabItem(
 	tabName = "control_chart",
 	tags$div(
@@ -105,6 +83,28 @@ scatter_plot_body <- bs4TabItem(
 				column(12, align = "center", style = "font-size: 20px;", "Scatter plot"),
 				column(12, align = "center", uiOutput("scatter_plot_filters")),
 				column(12, plotlyOutput("scatter_plot"))
+			)
+		)
+	)
+)
+
+
+stratification_body <- bs4TabItem(
+	tabName = "stratification",
+	tags$div(
+		fluidPage(
+			fluidRow(
+				column(12, align = "center", style = "font-size: 20px;", "Stratification"),
+				column(12, align = "center", uiOutput("stratification_filters")),
+				column(12, align = "center", tableOutput("stratification_table")),
+				column(12, br()),
+				column(4, plotlyOutput("stratification_shift")),
+				column(4, plotlyOutput("stratification_family")),
+				column(4, plotlyOutput("stratification_customer")),
+				column(12, br()),
+				column(4, plotlyOutput("stratification_model")),
+				column(4, plotlyOutput("stratification_operator")),
+				column(4, plotlyOutput("stratification_day_of_week"))
 			)
 		)
 	)
