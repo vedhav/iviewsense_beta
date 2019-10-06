@@ -53,11 +53,6 @@ ui = tags$div(
 						icon = "database"
 					),
 					bs4SidebarMenuItem(
-						text = "Stratification",
-						tabName = "stratification",
-						icon = "layer-group"
-					),
-					bs4SidebarMenuItem(
 						text = "Control chart",
 						tabName = "control_chart",
 						icon = "hourglass-half"
@@ -71,6 +66,11 @@ ui = tags$div(
 						text = "Scatter plot",
 						tabName = "scatter_plot",
 						icon = "chart-line"
+					),
+					bs4SidebarMenuItem(
+						text = "Stratification",
+						tabName = "stratification",
+						icon = "layer-group"
 					),
 					bs4SidebarMenuItem(
 						text = "Pareto",
@@ -87,10 +87,10 @@ ui = tags$div(
 			body = bs4DashBody(
 				bs4TabItems(
 					data_source_body,
-					stratification_body,
 					control_chart_body,
 					histogram_body,
 					scatter_plot_body,
+					stratification_body,
 					pareto_body,
 					cause_effect_body
 				)
@@ -108,6 +108,8 @@ server = function(input, output, session) {
 	checkSheetFilterData <- data.frame()
 	checkSheetFilterDataDisplay <- data.frame()
 	checkSheetCreateData <- data.frame()
+
+	######################################## DATA SOURCE ########################################
 	observeEvent(input$remote_or_local, {
 		output$data_source_body_ui <- renderUI({
 			if (input$remote_or_local %% 2 == 0) {
@@ -171,6 +173,169 @@ server = function(input, output, session) {
 		plots__trigger$trigger()
 	})
 
+
+	######################################## CONTROL CHART ########################################
+	output$control_chart_filters <- renderUI({
+		plots__trigger$depend()
+		familyOptions <- unique(mainData$Family)
+		custOptions <- unique(mainData$Cust)
+		modelOptions <- unique(mainData$Model)
+		resultOptions <- unique(mainData$Result)
+		plotVariables <- names(mainData)[11:51]
+		fluidRow(
+			column(
+				2,
+				dateInput(
+					"control_chart_filters_date_from", "From date",
+					minDate, minDate, maxDate
+				)
+			),
+			column(
+				2,
+				dateInput(
+					"control_chart_filters_date_to", "To date",
+					maxDate, minDate, maxDate
+				)
+			),
+			column(
+				2,
+				pickerInput(
+					"control_chart_filters_family", "Family",
+					familyOptions, familyOptions, multiple = TRUE,
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
+				)
+			),
+			column(
+				2,
+				pickerInput(
+					"control_chart_filters_cust", "Customer",
+					custOptions, custOptions, multiple = TRUE,
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
+				)
+			),
+			column(
+				2,
+				pickerInput(
+					"control_chart_filters_model", "Model",
+					modelOptions, modelOptions, multiple = TRUE,
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
+				)
+			),
+			column(
+				2,
+				pickerInput(
+					"control_chart_filters_result", "Result",
+					resultOptions, resultOptions, multiple = TRUE,
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
+				)
+			),
+			column(
+				4,
+				pickerInput(
+					"control_chart_filters_shift", "Shift",
+					shiftNames, shiftNames, multiple = TRUE,
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
+				)
+			),
+			column(
+				4,
+				pickerInput(
+					"control_chart_filters_machine", "Machine",
+					machineOptions, machineOptions, multiple = TRUE,
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
+				)
+			),
+			column(
+				4,
+				pickerInput(
+					"control_chart_filters_operator", "Operator",
+					operatorOptions, operatorOptions, multiple = TRUE,
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
+				)
+			),
+			column(
+				4, offset = 1,
+				pickerInput(
+					"control_chart_column", "Select the plot variable",
+					plotVariables, "CW_1",
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
+				)
+			),
+			column(3, numericInput("control_chart_lcl", "Enter the LCL", value = 0)),
+			column(3, numericInput("control_chart_ucl", "Enter the UCL", value = 0))
+		)
+	})
+	observeEvent(c(
+		input$control_chart_column, input$control_chart_filters_family,
+		input$control_chart_filters_cust, input$control_chart_filters_model,
+		input$control_chart_filters_result, input$control_chart_filters_date_from,
+		input$control_chart_filters_date_to, input$control_chart_filters_shift,
+		input$control_chart_filters_operator, input$control_chart_filters_machine), {
+		plotData <- mainData %>%
+			filter(
+				Family %in% input$control_chart_filters_family & Cust %in% input$control_chart_filters_cust &
+				Model %in% input$control_chart_filters_model & Result %in% input$control_chart_filters_result &
+				Date >= input$control_chart_filters_date_from & Date <= input$control_chart_filters_date_to &
+				shift %in% input$control_chart_filters_shift & Opr %in% input$control_chart_filters_operator &
+				Machine %in% input$control_chart_filters_machine
+			)
+		if (nrow(plotData) == 0) {
+			output$control_chart_plot_xbar_one <- renderPlot(textPlot())
+			output$control_chart_plot_xbar_r <- renderPlot(textPlot())
+			return(NULL)
+		}
+		plot_variable <- plotData[[input$control_chart_column]]
+		plot_variable <- plot_variable[!is.na(plot_variable)]
+		outPlot <- qcc(data = plot_variable, type = "xbar.one", plot = FALSE)
+		lslValue <- round(outPlot$limits[1], 2)
+		uslValue <- round(outPlot$limits[2], 2)
+		updateNumericInput(
+			session, "control_chart_lcl", value = lslValue
+			# label = HTML(paste0("Enter the LCL (mean - 3 x sd = ", lslValue, ")"))
+		)
+		updateNumericInput(
+			session, "control_chart_ucl", value = uslValue
+			# label = HTML(paste0("Enter the UCL (mean + 3 x sd = ", uslValue, ")"))
+		)
+		output$control_chart_plot_xbar_one <- renderPlot({
+			plots__trigger$depend()
+			returnPlot <- tryCatch({
+				qcc(
+					data = plot_variable, type = "xbar.one",
+					limits = c(input$control_chart_lcl, input$control_chart_ucl)
+				)
+			}, error = function(err) {
+				returnPlot <- textPlot(paste0("There is no proper data for ", input$control_chart_column))
+			})
+			return(returnPlot)
+		})
+		matrixData <- matrix(cbind(plot_variable[1:length(plot_variable) - 1], plot_variable[2:length(plot_variable)]), ncol = 2)
+		outPlot <- qcc(data = matrixData, type = "R", plot = FALSE)
+		lslValue <- round(outPlot$limits[1], 2)
+		uslValue <- round(outPlot$limits[2], 2)
+		updateNumericInput(
+			session, "control_chart_r_lcl", value = lslValue
+			# label = HTML(paste0("Enter the LCL (mean - 3 x sd = ", lslValue, ")"))
+		)
+		updateNumericInput(
+			session, "control_chart_r_ucl", value = uslValue
+			# label = HTML(paste0("Enter the UCL (mean + 3 x sd = ", uslValue, ")"))
+		)
+		output$control_chart_plot_xbar_r <- renderPlot({
+			plots__trigger$depend()
+			returnPlot <- tryCatch({
+				qcc(
+					data = matrixData, type = "R",
+					limits = c(input$control_chart_r_lcl, input$control_chart_r_ucl)
+				)
+			}, error = function(err) {
+				returnPlot <- textPlot(paste0("There is no proper data for ", input$control_chart_column))
+			})
+			return(returnPlot)
+		})
+	})
+
+	######################################## HISTOGRAM ########################################
 	output$histogram_filters <- renderUI({
 		plots__trigger$depend()
 		plotVariables <- names(mainData)[11:51]
@@ -307,6 +472,7 @@ server = function(input, output, session) {
 		})
 	})
 
+	######################################## SCATTER PLOT ########################################
 	output$scatter_plot_filters <- renderUI({
 		plots__trigger$depend()
 		numericPlotVariables <- names(select_if(mainData, is.numeric))
@@ -473,165 +639,7 @@ server = function(input, output, session) {
 		return(plot)
 	})
 
-	output$control_chart_filters <- renderUI({
-		plots__trigger$depend()
-		familyOptions <- unique(mainData$Family)
-		custOptions <- unique(mainData$Cust)
-		modelOptions <- unique(mainData$Model)
-		resultOptions <- unique(mainData$Result)
-		plotVariables <- names(mainData)[11:51]
-		fluidRow(
-			column(
-				2,
-				dateInput(
-					"control_chart_filters_date_from", "From date",
-					minDate, minDate, maxDate
-				)
-			),
-			column(
-				2,
-				dateInput(
-					"control_chart_filters_date_to", "To date",
-					maxDate, minDate, maxDate
-				)
-			),
-			column(
-				2,
-				pickerInput(
-					"control_chart_filters_family", "Family",
-					familyOptions, familyOptions, multiple = TRUE,
-					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
-				)
-			),
-			column(
-				2,
-				pickerInput(
-					"control_chart_filters_cust", "Customer",
-					custOptions, custOptions, multiple = TRUE,
-					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
-				)
-			),
-			column(
-				2,
-				pickerInput(
-					"control_chart_filters_model", "Model",
-					modelOptions, modelOptions, multiple = TRUE,
-					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
-				)
-			),
-			column(
-				2,
-				pickerInput(
-					"control_chart_filters_result", "Result",
-					resultOptions, resultOptions, multiple = TRUE,
-					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
-				)
-			),
-			column(
-				4,
-				pickerInput(
-					"control_chart_filters_shift", "Shift",
-					shiftNames, shiftNames, multiple = TRUE,
-					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
-				)
-			),
-			column(
-				4,
-				pickerInput(
-					"control_chart_filters_machine", "Machine",
-					machineOptions, machineOptions, multiple = TRUE,
-					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
-				)
-			),
-			column(
-				4,
-				pickerInput(
-					"control_chart_filters_operator", "Operator",
-					operatorOptions, operatorOptions, multiple = TRUE,
-					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
-				)
-			),
-			column(
-				4, offset = 1,
-				pickerInput(
-					"control_chart_column", "Select the plot variable",
-					plotVariables, "CW_1",
-					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
-				)
-			),
-			column(3, numericInput("control_chart_lcl", "Enter the LCL", value = 0)),
-			column(3, numericInput("control_chart_ucl", "Enter the UCL", value = 0))
-		)
-	})
-	observeEvent(c(
-		input$control_chart_column, input$control_chart_filters_family,
-		input$control_chart_filters_cust, input$control_chart_filters_model,
-		input$control_chart_filters_result, input$control_chart_filters_date_from,
-		input$control_chart_filters_date_to, input$control_chart_filters_shift,
-		input$control_chart_filters_operator, input$control_chart_filters_machine), {
-		plotData <- mainData %>%
-			filter(
-				Family %in% input$control_chart_filters_family & Cust %in% input$control_chart_filters_cust &
-				Model %in% input$control_chart_filters_model & Result %in% input$control_chart_filters_result &
-				Date >= input$control_chart_filters_date_from & Date <= input$control_chart_filters_date_to &
-				shift %in% input$control_chart_filters_shift & Opr %in% input$control_chart_filters_operator &
-				Machine %in% input$control_chart_filters_machine
-			)
-		if (nrow(plotData) == 0) {
-			output$control_chart_plot_xbar_one <- renderPlot(textPlot())
-			output$control_chart_plot_xbar_r <- renderPlot(textPlot())
-			return(NULL)
-		}
-		plot_variable <- plotData[[input$control_chart_column]]
-		plot_variable <- plot_variable[!is.na(plot_variable)]
-		outPlot <- qcc(data = plot_variable, type = "xbar.one", plot = FALSE)
-		lslValue <- round(outPlot$limits[1], 2)
-		uslValue <- round(outPlot$limits[2], 2)
-		updateNumericInput(
-			session, "control_chart_lcl", value = lslValue
-			# label = HTML(paste0("Enter the LCL (mean - 3 x sd = ", lslValue, ")"))
-		)
-		updateNumericInput(
-			session, "control_chart_ucl", value = uslValue
-			# label = HTML(paste0("Enter the UCL (mean + 3 x sd = ", uslValue, ")"))
-		)
-		output$control_chart_plot_xbar_one <- renderPlot({
-			plots__trigger$depend()
-			returnPlot <- tryCatch({
-				qcc(
-					data = plot_variable, type = "xbar.one",
-					limits = c(input$control_chart_lcl, input$control_chart_ucl)
-				)
-			}, error = function(err) {
-				returnPlot <- textPlot(paste0("There is no proper data for ", input$control_chart_column))
-			})
-			return(returnPlot)
-		})
-		matrixData <- matrix(cbind(plot_variable[1:length(plot_variable) - 1], plot_variable[2:length(plot_variable)]), ncol = 2)
-		outPlot <- qcc(data = matrixData, type = "R", plot = FALSE)
-		lslValue <- round(outPlot$limits[1], 2)
-		uslValue <- round(outPlot$limits[2], 2)
-		updateNumericInput(
-			session, "control_chart_r_lcl", value = lslValue
-			# label = HTML(paste0("Enter the LCL (mean - 3 x sd = ", lslValue, ")"))
-		)
-		updateNumericInput(
-			session, "control_chart_r_ucl", value = uslValue
-			# label = HTML(paste0("Enter the UCL (mean + 3 x sd = ", uslValue, ")"))
-		)
-		output$control_chart_plot_xbar_r <- renderPlot({
-			plots__trigger$depend()
-			returnPlot <- tryCatch({
-				qcc(
-					data = matrixData, type = "R",
-					limits = c(input$control_chart_r_lcl, input$control_chart_r_ucl)
-				)
-			}, error = function(err) {
-				returnPlot <- textPlot(paste0("There is no proper data for ", input$control_chart_column))
-			})
-			return(returnPlot)
-		})
-	})
+	######################################## STRATIFICATION ########################################
 	output$stratification_filters <- renderUI({
 		plots__trigger$depend()
 		plotVariables <- names(select_if(mainData, is.numeric))
@@ -734,7 +742,7 @@ server = function(input, output, session) {
 				y = reorder(shiftPlotData$shift, shiftPlotData$fif_percentage),
 				type = "bar", orientation = 'h',
 				hovertemplate = paste(
-					"<i>%{y}'s Pass percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
+					"<i>%{y}'s FTF percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
 				)
 			) %>% layout(
 				title = "% of FTF across different Shifts",
@@ -755,7 +763,7 @@ server = function(input, output, session) {
 				y = reorder(familyPlotData$Family, familyPlotData$fif_percentage),
 				type = "bar", orientation = 'h',
 				hovertemplate = paste(
-					"<i>%{y}'s Pass percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
+					"<i>%{y}'s FTF percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
 				)
 			) %>% layout(
 				title = "% of FTF across different Families",
@@ -776,7 +784,7 @@ server = function(input, output, session) {
 				y = reorder(customerPlotData$Cust, customerPlotData$fif_percentage),
 				type = "bar", orientation = 'h',
 				hovertemplate = paste(
-					"<i>%{y}'s Pass percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
+					"<i>%{y}'s FTF percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
 				)
 			) %>% layout(
 				title = "% of FTF across different Customers",
@@ -797,7 +805,7 @@ server = function(input, output, session) {
 				y = reorder(modelPlotData$Model, modelPlotData$fif_percentage),
 				type = "bar", orientation = 'h',
 				hovertemplate = paste(
-					"<i>%{y}'s Pass percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
+					"<i>%{y}'s FTF percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
 				)
 			) %>% layout(
 				title = "% of FTF across different Models",
@@ -818,7 +826,7 @@ server = function(input, output, session) {
 				y = reorder(operatorPlotData$Opr, operatorPlotData$fif_percentage),
 				type = "bar", orientation = 'h',
 				hovertemplate = paste(
-					"<i>%{y}'s Pass percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
+					"<i>%{y}'s FTF percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
 				)
 			) %>% layout(
 				title = "% of FTF across different Operators",
@@ -839,7 +847,7 @@ server = function(input, output, session) {
 				y = reorder(dayOfWeekPlotData$DayOfWeek, dayOfWeekPlotData$fif_percentage),
 				type = "bar", orientation = 'h',
 				hovertemplate = paste(
-					"<i>%{y}'s Pass percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
+					"<i>%{y}'s FTF percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
 				)
 			) %>% layout(
 				title = "% of FTF across different days of the week"
@@ -859,7 +867,6 @@ server = function(input, output, session) {
 			kable_styling("striped", full_width = F) %>%
 			add_header_above(c(" " = 2, "Shift 1" = 2, "Shift 2" = 2, "Shift 3" = 2, " " = 1))
 	}
-
 	observeEvent(input$navigate_check_sheet, {
 		selectedRow <- as.numeric(strsplit(input$navigate_check_sheet, "_")[[1]][2])
 		selectedData <- stratificationTable[selectedRow,]
@@ -934,6 +941,7 @@ server = function(input, output, session) {
 		)
 	})
 
+	######################################## PARETO ########################################
 	output$pareto_filters <- renderUI({
 		plots__trigger$depend()
 		pareto__trigger$depend()
@@ -944,18 +952,34 @@ server = function(input, output, session) {
 		customerList <- unique(tableData$Cust)
 		modelList <- unique(tableData$Model)
 		shiftList <- unique(tableData$shift)
+		machineOptions <- unique(tableData$Machine)
+		minDate <- min(tableData$Date)
+		maxDate <- max(tableData$Date)
 		fluidRow(
-			column(1, ""),
 			column(
-				2,
+				3,
+				dateInput(
+					"pareto_filters_date_from", "From date",
+					minDate, minDate, maxDate
+				)
+			),
+			column(
+				3,
+				dateInput(
+					"pareto_filters_date_to", "To date",
+					maxDate, minDate, maxDate
+				)
+			),
+			column(
+				3,
 				pickerInput(
-					"pareto_filters_defects", "Defects",
-					defectsList, defectsList, multiple = TRUE,
+					"pareto_filters_machine", "Machine",
+					machineOptions, machineOptions, multiple = TRUE,
 					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
 				)
 			),
 			column(
-				2,
+				3,
 				pickerInput(
 					"pareto_filters_family", "Family",
 					familyList, familyList, multiple = TRUE,
@@ -963,7 +987,7 @@ server = function(input, output, session) {
 				)
 			),
 			column(
-				2,
+				3,
 				pickerInput(
 					"pareto_filters_customer", "Customer",
 					customerList, customerList, multiple = TRUE,
@@ -971,7 +995,7 @@ server = function(input, output, session) {
 				)
 			),
 			column(
-				2,
+				3,
 				pickerInput(
 					"pareto_filters_model", "Model",
 					modelList, modelList, multiple = TRUE,
@@ -979,10 +1003,18 @@ server = function(input, output, session) {
 				)
 			),
 			column(
-				2,
+				3,
 				pickerInput(
 					"pareto_filters_shift", "Shift",
 					shiftList, shiftList, multiple = TRUE,
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
+				)
+			),
+			column(
+				3,
+				pickerInput(
+					"pareto_filters_defects", "Defects",
+					defectsList, defectsList, multiple = TRUE,
 					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
 				)
 			)
@@ -993,12 +1025,15 @@ server = function(input, output, session) {
 		pareto__trigger$depend()
 		plotData <- mainData %>% filter(Defects_Category %in% defectsCategories)
 		if (nrow(plotData) == 0) return(textPlot("Please add Defects from the Stratification tab to get the Pareto chart"))
-		plotData <- plotData %>%
+		plotData <- tryCatch({
+			plotData %>%
 			filter(
 				Defects_Category %in% input$pareto_filters_defects & Family %in% input$pareto_filters_family &
 				Cust %in% input$pareto_filters_customer & Model %in% input$pareto_filters_model &
-				shift %in% input$pareto_filters_shift
+				shift %in% input$pareto_filters_shift & Machine %in% input$pareto_filters_machine &
+				Date >= input$pareto_filters_date_from & Date <= input$pareto_filters_date_to
 			)
+		}, error = function(err) { return(data.frame()) })
 		if (nrow(plotData) == 0) return(textPlot())
 		plotData$Defects_Qty <- as.numeric(plotData$Defects_Qty)
 		plotData <- plotData %>% group_by(Defects_Category) %>% summarise(count_defects = sum(Defects_Qty)) %>% ungroup()
@@ -1082,6 +1117,7 @@ server = function(input, output, session) {
 		}
 	})
 
+	######################################## CAUSE & EFFECT ########################################
 	output$cause_effect_filters <- renderUI({
 		plots__trigger$depend()
 		pareto__trigger$depend()
@@ -1098,10 +1134,35 @@ server = function(input, output, session) {
 		familyOptions <- unique(tableData$Family)
 		custOptions <- unique(tableData$Cust)
 		modelOptions <- unique(tableData$Model)
-		shiftList <- unique(tableData$shift)
+		shiftOptions <- unique(tableData$shift)
+		minDate <- min(tableData$Date)
+		maxDate <- max(tableData$Date)
+		machineOptions <- unique(tableData$Machine)
 		fluidRow(
 			column(
-				2,
+				3,
+				dateInput(
+					"cause_effect_filters_date_from", "From date",
+					minDate, minDate, maxDate
+				)
+			),
+			column(
+				3,
+				dateInput(
+					"cause_effect_filters_date_to", "To date",
+					maxDate, minDate, maxDate
+				)
+			),
+			column(
+				3,
+				pickerInput(
+					"cause_effect_filters_machine", "Machine",
+					machineOptions, machineOptions, multiple = TRUE,
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
+				)
+			),
+			column(
+				3,
 				pickerInput(
 					"cause_effect_filters_family", "Family",
 					familyOptions, familyOptions, multiple = TRUE,
@@ -1109,7 +1170,7 @@ server = function(input, output, session) {
 				)
 			),
 			column(
-				2,
+				3,
 				pickerInput(
 					"cause_effect_filters_cust", "Customer",
 					custOptions, custOptions, multiple = TRUE,
@@ -1117,7 +1178,7 @@ server = function(input, output, session) {
 				)
 			),
 			column(
-				2,
+				3,
 				pickerInput(
 					"cause_effect_filters_model", "Model",
 					modelOptions, modelOptions, multiple = TRUE,
@@ -1125,7 +1186,15 @@ server = function(input, output, session) {
 				)
 			),
 			column(
-				2,
+				3,
+				pickerInput(
+					"cause_effect_filters_shift", "Shift",
+					shiftOptions, shiftOptions, multiple = TRUE,
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
+				)
+			),
+			column(
+				3,
 				pickerInput(
 					"cause_effect_filters_defect_cat", "Defect Category",
 					defectsOptions, defectsOptions[1], multiple = FALSE
@@ -1137,7 +1206,9 @@ server = function(input, output, session) {
 		tableData <- mainData %>%
 			filter(
 				Defects_Category %in% defectsCategories & Family %in% input$cause_effect_filters_family &
-				Cust %in% input$cause_effect_filters_cust & Model %in% input$cause_effect_filters_model
+				Cust %in% input$cause_effect_filters_cust & Model %in% input$cause_effect_filters_model &
+				Date >= input$cause_effect_filters_date_from & Date <= input$cause_effect_filters_date_to &
+				Machine %in% input$cause_effect_filters_machine & shift %in% input$cause_effect_filters_shift
 			)
 			defectsOptions <- unique(tableData$Defects_Category)
 			updatePickerInput(session, "cause_effect_filters_defect_cat", selected = defectsOptions[1], choices = defectsOptions)
@@ -1147,11 +1218,15 @@ server = function(input, output, session) {
 		pareto__trigger$depend()
 		fish_bone__trigger$depend()
 		if (!hasDbConnection) return()
-		plotData <- mainData %>%
+		plotData <- tryCatch({
+			mainData %>%
 			filter(
-				Family %in% input$cause_effect_filters_family & Cust %in% input$cause_effect_filters_cust &
-				Model %in% input$cause_effect_filters_model & Defects_Category %in% input$cause_effect_filters_defect_cat
+				Defects_Category %in% defectsCategories & Family %in% input$cause_effect_filters_family &
+				Cust %in% input$cause_effect_filters_cust & Model %in% input$cause_effect_filters_model &
+				Date >= input$cause_effect_filters_date_from & Date <= input$cause_effect_filters_date_to &
+				Machine %in% input$cause_effect_filters_machine & shift %in% input$cause_effect_filters_shift
 			) %>% select(Family, Cust, Model, Defects_Category, cause)
+		}, error = function(err) { return(data.frame()) })
 		if (nrow(plotData) == 0) return(textPlot())
 		plotCause <- removeEmptyFishbones(as.list(fromJSON(plotData$cause[1])))
 		cause.and.effect(
@@ -1160,9 +1235,10 @@ server = function(input, output, session) {
 		)
 	})
 
-	# session$onSessionEnded(function() {
-	# 	stopApp()
-	# })
+	######################################## CLOSE R PROCESS WHEN SESSION ENDS ########################################
+	session$onSessionEnded(function() {
+		stopApp()
+	})
 }
 
 shinyApp(ui, server)
