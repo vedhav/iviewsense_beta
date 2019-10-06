@@ -132,7 +132,8 @@ cause_effect_body <- bs4TabItem(
 		fluidPage(
 			fluidRow(
 				column(12, align = "center", style = "font-size: 20px;", "Cause & effect"),
-				column(12, align = "center", "still under development!")
+				column(12, uiOutput("cause_effect_filters")),
+				column(12, plotOutput("cause_effect_fish_bone_plot"))
 			)
 		)
 	)

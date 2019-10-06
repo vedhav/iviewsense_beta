@@ -1,18 +1,5 @@
 source("global.R")
 
-cause_effect_body <- bs4TabItem(
-	tabName = "cause_effect",
-	tags$div(
-		fluidPage(
-			fluidRow(
-				column(12, align = "center", style = "font-size: 20px;", "Cause & effect"),
-				column(12, uiOutput("cause_effect_filters")),
-				column(12, plotOutput("cause_effect_fish_bone_plot"))
-			)
-		)
-	)
-)
-
 ui = tags$div(
 	tags$head(
 		tags$link(rel = "shortcut icon", type = "image/png", href = "iviewsense.png")
@@ -926,25 +913,25 @@ server = function(input, output, session) {
 			}
 		})
 		showModal(
-            modalDialog(
-                title = "Check Sheet",
-                size = "l",
-                fluidPage(
-                    align = "center",
-                    fluidRow(
-                    	HTML(
-                    		paste0(
+			modalDialog(
+				title = "Check Sheet",
+				size = "l",
+				fluidPage(
+					align = "center",
+					fluidRow(
+						HTML(
+							paste0(
 								"<b>Please enter the Defects category from one of these values:</b><br>",
 								paste(defectsCategories, collapse = ", ")
 							)
-                    	)
-                    ),
-                    fluidRow(DTOutput("check_sheet_table_ui"))
-                ),
-                footer = NULL,
-                easyClose = TRUE
-            )
-        )
+						)
+					),
+					fluidRow(DTOutput("check_sheet_table_ui"))
+				),
+				footer = NULL,
+				easyClose = TRUE
+			)
+		)
 	})
 
 	output$pareto_filters <- renderUI({
@@ -1090,6 +1077,8 @@ server = function(input, output, session) {
 				select(Man_Cause, Method_Cause, Machine_Cause, Material_Cause, Measurement_Cause, Environment_Cause)
 			updateCause <- toJSON(updateData)
 			updateNewCause(updateId, updateCause)
+			mainData[mainData$id == updateId, "cause"] <<- updateCause
+			fish_bone__trigger$trigger()
 		}
 	})
 
@@ -1097,6 +1086,13 @@ server = function(input, output, session) {
 		plots__trigger$depend()
 		pareto__trigger$depend()
 		tableData <- mainData %>% filter(Defects_Category %in% defectsCategories)
+		if (!hasDbConnection) {
+			causeEffectUI <- fluidRow(
+				style = "margin-top:50px", column(3, ""),
+				column(6, "Cause and effect plot is only applicable when you choose data from remote server")
+			)
+			return(causeEffectUI)
+		}
 		if (nrow(tableData) == 0) return()
 		defectsOptions <- unique(tableData$Defects_Category)
 		familyOptions <- unique(tableData$Family)
@@ -1132,25 +1128,41 @@ server = function(input, output, session) {
 				2,
 				pickerInput(
 					"cause_effect_filters_defect_cat", "Defect Category",
-					defectsOptions, defectsOptions, multiple = FALSE
+					defectsOptions, defectsOptions[1], multiple = FALSE
 				)
 			)
 		)
 	})
+	observeEvent(c(input$cause_effect_filters_family, input$cause_effect_filters_cust, input$cause_effect_filters_model), {
+		tableData <- mainData %>%
+			filter(
+				Defects_Category %in% defectsCategories & Family %in% input$cause_effect_filters_family &
+				Cust %in% input$cause_effect_filters_cust & Model %in% input$cause_effect_filters_model
+			)
+			defectsOptions <- unique(tableData$Defects_Category)
+			updatePickerInput(session, "cause_effect_filters_defect_cat", selected = defectsOptions[1], choices = defectsOptions)
+	})
 	output$cause_effect_fish_bone_plot <- renderPlot({
 		plots__trigger$depend()
 		pareto__trigger$depend()
+		fish_bone__trigger$depend()
+		if (!hasDbConnection) return()
 		plotData <- mainData %>%
 			filter(
 				Family %in% input$cause_effect_filters_family & Cust %in% input$cause_effect_filters_cust &
 				Model %in% input$cause_effect_filters_model & Defects_Category %in% input$cause_effect_filters_defect_cat
 			) %>% select(Family, Cust, Model, Defects_Category, cause)
 		if (nrow(plotData) == 0) return(textPlot())
+		plotCause <- removeEmptyFishbones(as.list(fromJSON(plotData$cause[1])))
 		cause.and.effect(
-			cause = fromJSON(plotData$cause[1]),
-			effect = plotData$Defects_Category
+			cause = plotCause,
+			effect = plotData$Defects_Category[1]
 		)
 	})
+
+	# session$onSessionEnded(function() {
+	# 	stopApp()
+	# })
 }
 
 shinyApp(ui, server)
