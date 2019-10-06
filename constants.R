@@ -17,6 +17,7 @@ makeReactiveTrigger <<- function() {
 
 plots__trigger <<- makeReactiveTrigger()
 pareto__trigger <<- makeReactiveTrigger()
+fish_bone__trigger <<- makeReactiveTrigger()
 
 machinesList <<- c("Geartek", "Testek", "Elnix", "Dynaspede", "RT Tek")
 shiftNames <<- c("Shift One", "Shift Two", "Shift Three")

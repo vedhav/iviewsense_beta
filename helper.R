@@ -108,6 +108,13 @@ updateNewCause <- function(id, causeJSON) {
     )
 }
 
+removeEmptyFishbones <- function(causeList) {
+    for (i in 1:length(causeList)) {
+        causeList[[i]] <- causeList[[i]][causeList[[i]] != ""]
+    }
+    return(causeList)
+}
+
 killDbxConnections <- function () {
     all_cons <- dbListConnections(databaseDriver)
     for(con in all_cons)

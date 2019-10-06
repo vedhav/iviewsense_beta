@@ -119,7 +119,10 @@ pareto_body <- bs4TabItem(
 				column(12, align = "center", style = "font-size: 20px;", "Pareto"),
 				column(12, align = "center", uiOutput("pareto_filters")),
 				column(12, plotOutput("pareto_plot")),
-				column(12, DTOutput("pareto_tables"))
+				column(
+					12, style = "overflow-y: scroll;",
+					DTOutput("pareto_tables")
+				)
 			)
 		)
 	)
@@ -132,7 +135,8 @@ cause_effect_body <- bs4TabItem(
 		fluidPage(
 			fluidRow(
 				column(12, align = "center", style = "font-size: 20px;", "Cause & effect"),
-				column(12, align = "center", "still under development!")
+				column(12, uiOutput("cause_effect_filters")),
+				column(12, plotOutput("cause_effect_fish_bone_plot"))
 			)
 		)
 	)
