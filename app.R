@@ -1125,10 +1125,35 @@ server = function(input, output, session) {
 		familyOptions <- unique(tableData$Family)
 		custOptions <- unique(tableData$Cust)
 		modelOptions <- unique(tableData$Model)
-		shiftList <- unique(tableData$shift)
+		shiftOptions <- unique(tableData$shift)
+		minDate <- min(tableData$Date)
+		maxDate <- max(tableData$Date)
+		machineOptions <- unique(tableData$Machine)
 		fluidRow(
 			column(
-				2,
+				3,
+				dateInput(
+					"cause_effect_filters_date_from", "From date",
+					minDate, minDate, maxDate
+				)
+			),
+			column(
+				3,
+				dateInput(
+					"cause_effect_filters_date_to", "To date",
+					maxDate, minDate, maxDate
+				)
+			),
+			column(
+				3,
+				pickerInput(
+					"cause_effect_filters_machine", "Machine",
+					machineOptions, machineOptions, multiple = TRUE,
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
+				)
+			),
+			column(
+				3,
 				pickerInput(
 					"cause_effect_filters_family", "Family",
 					familyOptions, familyOptions, multiple = TRUE,
@@ -1136,7 +1161,7 @@ server = function(input, output, session) {
 				)
 			),
 			column(
-				2,
+				3,
 				pickerInput(
 					"cause_effect_filters_cust", "Customer",
 					custOptions, custOptions, multiple = TRUE,
@@ -1144,7 +1169,7 @@ server = function(input, output, session) {
 				)
 			),
 			column(
-				2,
+				3,
 				pickerInput(
 					"cause_effect_filters_model", "Model",
 					modelOptions, modelOptions, multiple = TRUE,
@@ -1152,7 +1177,15 @@ server = function(input, output, session) {
 				)
 			),
 			column(
-				2,
+				3,
+				pickerInput(
+					"cause_effect_filters_shift", "Shift",
+					shiftOptions, shiftOptions, multiple = TRUE,
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
+				)
+			),
+			column(
+				3,
 				pickerInput(
 					"cause_effect_filters_defect_cat", "Defect Category",
 					defectsOptions, defectsOptions[1], multiple = FALSE
@@ -1164,7 +1197,9 @@ server = function(input, output, session) {
 		tableData <- mainData %>%
 			filter(
 				Defects_Category %in% defectsCategories & Family %in% input$cause_effect_filters_family &
-				Cust %in% input$cause_effect_filters_cust & Model %in% input$cause_effect_filters_model
+				Cust %in% input$cause_effect_filters_cust & Model %in% input$cause_effect_filters_model &
+				Date >= input$cause_effect_filters_date_from & Date <= input$cause_effect_filters_date_to &
+				Machine %in% input$cause_effect_filters_machine & shift %in% input$cause_effect_filters_shift
 			)
 			defectsOptions <- unique(tableData$Defects_Category)
 			updatePickerInput(session, "cause_effect_filters_defect_cat", selected = defectsOptions[1], choices = defectsOptions)
@@ -1174,11 +1209,15 @@ server = function(input, output, session) {
 		pareto__trigger$depend()
 		fish_bone__trigger$depend()
 		if (!hasDbConnection) return()
-		plotData <- mainData %>%
+		plotData <- tryCatch({
+			mainData %>%
 			filter(
-				Family %in% input$cause_effect_filters_family & Cust %in% input$cause_effect_filters_cust &
-				Model %in% input$cause_effect_filters_model & Defects_Category %in% input$cause_effect_filters_defect_cat
+				Defects_Category %in% defectsCategories & Family %in% input$cause_effect_filters_family &
+				Cust %in% input$cause_effect_filters_cust & Model %in% input$cause_effect_filters_model &
+				Date >= input$cause_effect_filters_date_from & Date <= input$cause_effect_filters_date_to &
+				Machine %in% input$cause_effect_filters_machine & shift %in% input$cause_effect_filters_shift
 			) %>% select(Family, Cust, Model, Defects_Category, cause)
+		}, error = function(err) { return(data.frame()) })
 		if (nrow(plotData) == 0) return(textPlot())
 		plotCause <- removeEmptyFishbones(as.list(fromJSON(plotData$cause[1])))
 		cause.and.effect(
