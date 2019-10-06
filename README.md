@@ -22,14 +22,16 @@ Refer https://www.architectryan.com/2018/03/17/add-to-the-path-on-windows-10/
 - Make sure you have installed these packages by running this command in R.
 ```
 install.packages(
-	c(
-		"shiny", "shinyWidgets", "shinyjs", "shinyBS", "shinyalert", "bs4Dash",
-		"tidyverse", "plotly", "SixSigma", "assertthat", "qcc", "readxl", "lubridate", "knitr",
-		"kableExtra", "dbx", "RPostgreSQL", "RMySQL", "DT", "jsonlite", "shinyShortcut"
-	)
+  c(
+    "shiny", "shinyWidgets", "shinyjs", "shinyBS", "shinyalert", "bs4Dash",
+    "tidyverse", "plotly", "SixSigma", "assertthat", "qcc", "readxl", "lubridate", "knitr",
+    "kableExtra", "dbx", "RPostgreSQL", "RMySQL", "DT", "jsonlite", "shinyShortcut"
+  )
 )
 ```
-- Make sure that you have a local MySQL database. For installation refer http://www.wampserver.com/en/
+- Make sure that you have a local MySQL database. For installation refer http://www.wampserver.com/en/<br>
+Please add the credentials to the database in "constants.R"<br>
+You'll probably have to change these variables "hostUserName", "hostPassword", "hostIP" and "dbName"
 
 
 ## Installation
