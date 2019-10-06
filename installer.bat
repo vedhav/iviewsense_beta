@@ -1,0 +1,1 @@
+Rscript setup.R
