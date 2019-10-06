@@ -53,11 +53,6 @@ ui = tags$div(
 						icon = "database"
 					),
 					bs4SidebarMenuItem(
-						text = "Stratification",
-						tabName = "stratification",
-						icon = "layer-group"
-					),
-					bs4SidebarMenuItem(
 						text = "Control chart",
 						tabName = "control_chart",
 						icon = "hourglass-half"
@@ -71,6 +66,11 @@ ui = tags$div(
 						text = "Scatter plot",
 						tabName = "scatter_plot",
 						icon = "chart-line"
+					),
+					bs4SidebarMenuItem(
+						text = "Stratification",
+						tabName = "stratification",
+						icon = "layer-group"
 					),
 					bs4SidebarMenuItem(
 						text = "Pareto",
@@ -87,10 +87,10 @@ ui = tags$div(
 			body = bs4DashBody(
 				bs4TabItems(
 					data_source_body,
-					stratification_body,
 					control_chart_body,
 					histogram_body,
 					scatter_plot_body,
+					stratification_body,
 					pareto_body,
 					cause_effect_body
 				)
@@ -734,7 +734,7 @@ server = function(input, output, session) {
 				y = reorder(shiftPlotData$shift, shiftPlotData$fif_percentage),
 				type = "bar", orientation = 'h',
 				hovertemplate = paste(
-					"<i>%{y}'s Pass percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
+					"<i>%{y}'s FTF percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
 				)
 			) %>% layout(
 				title = "% of FTF across different Shifts",
@@ -755,7 +755,7 @@ server = function(input, output, session) {
 				y = reorder(familyPlotData$Family, familyPlotData$fif_percentage),
 				type = "bar", orientation = 'h',
 				hovertemplate = paste(
-					"<i>%{y}'s Pass percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
+					"<i>%{y}'s FTF percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
 				)
 			) %>% layout(
 				title = "% of FTF across different Families",
@@ -776,7 +776,7 @@ server = function(input, output, session) {
 				y = reorder(customerPlotData$Cust, customerPlotData$fif_percentage),
 				type = "bar", orientation = 'h',
 				hovertemplate = paste(
-					"<i>%{y}'s Pass percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
+					"<i>%{y}'s FTF percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
 				)
 			) %>% layout(
 				title = "% of FTF across different Customers",
@@ -797,7 +797,7 @@ server = function(input, output, session) {
 				y = reorder(modelPlotData$Model, modelPlotData$fif_percentage),
 				type = "bar", orientation = 'h',
 				hovertemplate = paste(
-					"<i>%{y}'s Pass percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
+					"<i>%{y}'s FTF percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
 				)
 			) %>% layout(
 				title = "% of FTF across different Models",
@@ -818,7 +818,7 @@ server = function(input, output, session) {
 				y = reorder(operatorPlotData$Opr, operatorPlotData$fif_percentage),
 				type = "bar", orientation = 'h',
 				hovertemplate = paste(
-					"<i>%{y}'s Pass percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
+					"<i>%{y}'s FTF percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
 				)
 			) %>% layout(
 				title = "% of FTF across different Operators",
@@ -839,7 +839,7 @@ server = function(input, output, session) {
 				y = reorder(dayOfWeekPlotData$DayOfWeek, dayOfWeekPlotData$fif_percentage),
 				type = "bar", orientation = 'h',
 				hovertemplate = paste(
-					"<i>%{y}'s Pass percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
+					"<i>%{y}'s FTF percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
 				)
 			) %>% layout(
 				title = "% of FTF across different days of the week"
@@ -944,18 +944,34 @@ server = function(input, output, session) {
 		customerList <- unique(tableData$Cust)
 		modelList <- unique(tableData$Model)
 		shiftList <- unique(tableData$shift)
+		machineOptions <- unique(tableData$Machine)
+		minDate <- min(tableData$Date)
+		maxDate <- max(tableData$Date)
 		fluidRow(
-			column(1, ""),
 			column(
-				2,
+				3,
+				dateInput(
+					"pareto_filters_date_from", "From date",
+					minDate, minDate, maxDate
+				)
+			),
+			column(
+				3,
+				dateInput(
+					"pareto_filters_date_to", "To date",
+					maxDate, minDate, maxDate
+				)
+			),
+			column(
+				3,
 				pickerInput(
-					"pareto_filters_defects", "Defects",
-					defectsList, defectsList, multiple = TRUE,
+					"pareto_filters_machine", "Machine",
+					machineOptions, machineOptions, multiple = TRUE,
 					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
 				)
 			),
 			column(
-				2,
+				3,
 				pickerInput(
 					"pareto_filters_family", "Family",
 					familyList, familyList, multiple = TRUE,
@@ -963,7 +979,7 @@ server = function(input, output, session) {
 				)
 			),
 			column(
-				2,
+				3,
 				pickerInput(
 					"pareto_filters_customer", "Customer",
 					customerList, customerList, multiple = TRUE,
@@ -971,7 +987,7 @@ server = function(input, output, session) {
 				)
 			),
 			column(
-				2,
+				3,
 				pickerInput(
 					"pareto_filters_model", "Model",
 					modelList, modelList, multiple = TRUE,
@@ -979,10 +995,18 @@ server = function(input, output, session) {
 				)
 			),
 			column(
-				2,
+				3,
 				pickerInput(
 					"pareto_filters_shift", "Shift",
 					shiftList, shiftList, multiple = TRUE,
+					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
+				)
+			),
+			column(
+				3,
+				pickerInput(
+					"pareto_filters_defects", "Defects",
+					defectsList, defectsList, multiple = TRUE,
 					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
 				)
 			)
@@ -993,12 +1017,15 @@ server = function(input, output, session) {
 		pareto__trigger$depend()
 		plotData <- mainData %>% filter(Defects_Category %in% defectsCategories)
 		if (nrow(plotData) == 0) return(textPlot("Please add Defects from the Stratification tab to get the Pareto chart"))
-		plotData <- plotData %>%
+		plotData <- tryCatch({
+			plotData %>%
 			filter(
 				Defects_Category %in% input$pareto_filters_defects & Family %in% input$pareto_filters_family &
 				Cust %in% input$pareto_filters_customer & Model %in% input$pareto_filters_model &
-				shift %in% input$pareto_filters_shift
+				shift %in% input$pareto_filters_shift & Machine %in% input$pareto_filters_machine &
+				Date >= input$pareto_filters_date_from & Date <= input$pareto_filters_date_to
 			)
+		}, error = function(err) { return(data.frame()) })
 		if (nrow(plotData) == 0) return(textPlot())
 		plotData$Defects_Qty <- as.numeric(plotData$Defects_Qty)
 		plotData <- plotData %>% group_by(Defects_Category) %>% summarise(count_defects = sum(Defects_Qty)) %>% ungroup()
