@@ -11,3 +11,30 @@
 ## Data
 
 - Geartek.xlsx is a sample data to run this application
+
+
+## Prerequisite to installation
+
+- You have to install R in your computer https://cran.r-project.org/bin/windows/base/
+- Once R is installed it will be presend in a folder like C:\Program Files\R\R-3.6.1\bin. Please add this to the Envirnment path variable.
+Refer https://www.architectryan.com/2018/03/17/add-to-the-path-on-windows-10/
+- Make sure you have installed these packages by running this command in R.
+```
+install.packages(
+	c(
+		"shiny", "shinyWidgets", "shinyjs", "shinyBS", "shinyalert", "bs4Dash",
+		"tidyverse", "plotly", "SixSigma", "assertthat", "qcc", "readxl", "lubridate", "knitr",
+		"kableExtra", "dbx", "RPostgreSQL", "RMySQL", "DT", "jsonlite", "shinyShortcut"
+	)
+)
+```
+- Make sure that you have a local MySQL database. For installation refer http://www.wampserver.com/en/
+
+
+## Installation
+
+- Please make sure that the prerequisite to the installation is done
+- Copy all the contents of this folder to a place you'd like
+- Run "installer.bat" This should install your program.
+- To open the program double click shinyShortcut.vbs
+- You can create a shortcut to shinyShortcut.vbs anywhere to open this application
