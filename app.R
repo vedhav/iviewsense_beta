@@ -1236,9 +1236,9 @@ server = function(input, output, session) {
 	})
 
 	######################################## CLOSE R PROCESS WHEN SESSION ENDS ########################################
-	session$onSessionEnded(function() {
-		stopApp()
-	})
+	# session$onSessionEnded(function() {
+	# 	stopApp()
+	# })
 }
 
 shinyApp(ui, server)

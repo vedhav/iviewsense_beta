@@ -77,17 +77,6 @@ formatData <- function(data) {
     return(data)
 }
 
-updateCauseEffectTable <- function(newData) {
-    currentData <- selectDbQuery("SELECT * FROM causeeffect")
-    currentData$all <- paste0(currentData$effect, currentData$Family, currentData$Cust, currentData$Model)
-    newData$all <- paste0(newData$effect, newData$Family, newData$Cust, newData$Model)
-    if (!newData$all %in% currentData$all) {
-        newData$cause <- toJSON(NULL)
-        newData$all <- NULL
-        insert("causeeffect", newData)
-    }
-}
-
 updateDefectInDB <- function(id, defect_cat, causeEffectData) {
     # print(paste0("UPDATE testresults SET Defects_Category = ", defect_cat, " WHERE id = ", id))
     execute(
@@ -98,7 +87,6 @@ updateDefectInDB <- function(id, defect_cat, causeEffectData) {
         "UPDATE testresults SET cause = ? WHERE id = ?",
         list(fishBoneSkeleton, id)
     )
-    updateCauseEffectTable(causeEffectData)
 }
 
 updateNewCause <- function(id, causeJSON) {
