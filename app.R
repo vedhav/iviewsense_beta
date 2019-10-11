@@ -1224,7 +1224,8 @@ server = function(input, output, session) {
 				Defects_Category %in% defectsCategories & Family %in% input$cause_effect_filters_family &
 				Cust %in% input$cause_effect_filters_cust & Model %in% input$cause_effect_filters_model &
 				Date >= input$cause_effect_filters_date_from & Date <= input$cause_effect_filters_date_to &
-				Machine %in% input$cause_effect_filters_machine & shift %in% input$cause_effect_filters_shift
+				Machine %in% input$cause_effect_filters_machine & shift %in% input$cause_effect_filters_shift &
+				Defects_Category == input$cause_effect_filters_defect_cat
 			) %>% select(Family, Cust, Model, Defects_Category, cause)
 		}, error = function(err) { return(data.frame()) })
 		if (nrow(plotData) == 0) return(textPlot())
