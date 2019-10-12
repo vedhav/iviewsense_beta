@@ -1,5 +1,6 @@
 source("global.R")
 
+# Dumping rane data
 main_data_1 <- read_xlsx("sampleData.xlsx", sheet = 1, col_names = TRUE)
 main_data_2 <- read_xlsx("sampleData.xlsx", sheet = 2, col_names = TRUE)
 main_data_3 <- read_xlsx("sampleData.xlsx", sheet = 3, col_names = TRUE)
@@ -30,3 +31,9 @@ mainData <- rbind(main_data_1, main_data_2, main_data_3, main_data_4, main_data_
 mainData$Defects_Category <- ""
 
 insert("testresults", mainData)
+
+
+
+# Dumping the general data
+mainData <- read_xlsx("sample_data_general.xlsx", sheet = 1, col_names = TRUE)
+insert("testresults_general", mainData)

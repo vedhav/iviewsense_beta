@@ -12,7 +12,7 @@
 /*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
 
 -- Dumping structure for table rane.testresults
-CREATE TABLE IF NOT EXISTS `testresults` (
+CREATE TABLE IF NOT EXISTS `testresults_general` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `Machine` varchar(45) COLLATE utf8_bin DEFAULT NULL,
   `Date_Time` varchar(100) COLLATE utf8_bin NOT NULL,
