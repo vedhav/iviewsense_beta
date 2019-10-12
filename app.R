@@ -133,7 +133,7 @@ server = function(input, output, session) {
 				)
 			} else {
 				ui <- HTML("The data from MySQL database will be used for analysis!")
-				mainData <<- selectDbQuery("SELECT * FROM testresults") %>% formatData()
+				mainData <<- selectDbQuery("SELECT * FROM testresults_general") %>% formatData()
 				minDate <<- as.Date(min(mainData$Date_Time), tz = "")
 				maxDate <<- as.Date(max(mainData$Date_Time), tz = "")
 				familyOptions <<- unique(mainData$Family)
@@ -158,6 +158,7 @@ server = function(input, output, session) {
 			popUpWindow("This is an invalid file format, please upload a .xlsx or .csv file")
 			return()
 		}
+		names(mainData) <<- dataColumnNames
 		mainData <<- formatData(mainData)
 		minDate <<- as.Date(min(mainData$Date_Time), tz = "")
 		maxDate <<- as.Date(max(mainData$Date_Time), tz = "")
