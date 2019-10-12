@@ -91,10 +91,28 @@ machineOptions <- NULL
 # dbName <<- 'rane'
 
 # MySQL
+# # local
+# databaseDriver <<- MySQL()
+# connectionAdapter <<- "mysql"
+# hostUserName <<- 'root'
+# hostPassword <<- 'admin@123'
+# hostIP <<- '127.0.0.1'
+# dbPort <<- 3306
+# dbName <<- 'rane'
+# live
+# databaseDriver <<- MySQL()
+# connectionAdapter <<- "mysql"
+# hostUserName <<- 'iviewsen_ivsadmn'
+# hostPassword <<- 'Good2019$'
+# hostIP <<- '199.79.62.17'
+# dbPort <<- 3306
+# dbName <<- 'iviewsen_testresults'
+
+# new live
 databaseDriver <<- MySQL()
 connectionAdapter <<- "mysql"
-hostUserName <<- 'root'
-hostPassword <<- 'admin@123'
-hostIP <<- '127.0.0.1'
+hostUserName <<- 'vedha'
+hostPassword <<- 'mySQLPassword12!@'
+hostIP <<- '159.65.228.248'
 dbPort <<- 3306
-dbName <<- 'rane'
+dbName <<- 'iviewsen_testresults'

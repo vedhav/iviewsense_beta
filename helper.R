@@ -62,10 +62,25 @@ formatData <- function(data) {
     } else {
         machineData <- "No Machine Name was specified!"
     }
+    if ("Defects_Category" %in% names(data)) {
+        defectsCatData <- data$Defects_Category
+        data$Defects_Category <- NULL
+    } else {
+        defectsCatData <- ""
+    }
+    if ("cause" %in% names(data)) {
+        causeData <- data$cause
+        data$cause <- NULL
+    } else {
+        causeData <- rep(fishBoneSkeleton, nrow(data))
+    }
     idAndMachineData <- data.frame(
         id = idData,
-        Machine = machineData
+        Machine = machineData,
+        Defects_Category = defectsCatData,
+        stringsAsFactors = FALSE
     )
+    idAndMachineData$cause <- causeData
     data <- cbind(idAndMachineData, data)
     data[, numericColumns] <- sapply(data[, numericColumns], as.numeric)
     data$Opr[is.na(data$Opr)] <- "NA"
@@ -75,17 +90,6 @@ formatData <- function(data) {
     data$Machine <- as.character(data$Machine)
     data$Defects_Qty <- 1
     return(data)
-}
-
-updateCauseEffectTable <- function(newData) {
-    currentData <- selectDbQuery("SELECT * FROM causeeffect")
-    currentData$all <- paste0(currentData$effect, currentData$Family, currentData$Cust, currentData$Model)
-    newData$all <- paste0(newData$effect, newData$Family, newData$Cust, newData$Model)
-    if (!newData$all %in% currentData$all) {
-        newData$cause <- toJSON(NULL)
-        newData$all <- NULL
-        insert("causeeffect", newData)
-    }
 }
 
 updateDefectInDB <- function(id, defect_cat, causeEffectData) {
@@ -98,7 +102,6 @@ updateDefectInDB <- function(id, defect_cat, causeEffectData) {
         "UPDATE testresults SET cause = ? WHERE id = ?",
         list(fishBoneSkeleton, id)
     )
-    updateCauseEffectTable(causeEffectData)
 }
 
 updateNewCause <- function(id, causeJSON) {
