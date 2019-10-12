@@ -167,7 +167,6 @@ server = function(input, output, session) {
 		resultOptions <<- unique(mainData$Result)
 		operatorOptions <<- unique(mainData$Opr)
 		machineOptions <<- unique(mainData$Machine)
-		mainData$Defects_Category <<- ""
 		mainData$Defects_Qty <<- "1"
 		hasDbConnection <<- FALSE
 		plots__trigger$trigger()

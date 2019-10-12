@@ -62,10 +62,25 @@ formatData <- function(data) {
     } else {
         machineData <- "No Machine Name was specified!"
     }
+    if ("Defects_Category" %in% names(data)) {
+        defectsCatData <- data$Defects_Category
+        data$Defects_Category <- NULL
+    } else {
+        defectsCatData <- ""
+    }
+    if ("cause" %in% names(data)) {
+        causeData <- data$cause
+        data$cause <- NULL
+    } else {
+        causeData <- rep(fishBoneSkeleton, nrow(data))
+    }
     idAndMachineData <- data.frame(
         id = idData,
-        Machine = machineData
+        Machine = machineData,
+        Defects_Category = defectsCatData,
+        stringsAsFactors = FALSE
     )
+    idAndMachineData$cause <- causeData
     data <- cbind(idAndMachineData, data)
     data[, numericColumns] <- sapply(data[, numericColumns], as.numeric)
     data$Opr[is.na(data$Opr)] <- "NA"
