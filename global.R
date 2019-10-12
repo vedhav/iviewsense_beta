@@ -98,13 +98,13 @@ stratification_body <- bs4TabItem(
 				column(12, align = "center", uiOutput("stratification_filters")),
 				column(12, align = "center", tableOutput("stratification_table")),
 				column(12, br()),
-				column(4, plotlyOutput("stratification_shift")),
+				column(4, plotlyOutput("stratification_shift", height = 250)),
+				column(4, plotlyOutput("stratification_operator", height = 250)),
+				column(4, plotlyOutput("stratification_day_of_week", height = 250)),
+				column(12, br()),
 				column(4, plotlyOutput("stratification_family")),
 				column(4, plotlyOutput("stratification_customer")),
-				column(12, br()),
-				column(4, plotlyOutput("stratification_model")),
-				column(4, plotlyOutput("stratification_operator")),
-				column(4, plotlyOutput("stratification_day_of_week"))
+				column(4, plotlyOutput("stratification_model"))
 			)
 		)
 	)
