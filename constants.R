@@ -112,7 +112,7 @@ machineOptions <- NULL
 databaseDriver <<- MySQL()
 connectionAdapter <<- "mysql"
 hostUserName <<- 'vedha'
-hostPassword <<- 'vMySQLPassword1!'
-hostIP <<- '139.59.18.132'
+hostPassword <<- 'vMySQLPassword12!@'
+hostIP <<- '159.65.150.205'
 dbPort <<- 3306
 dbName <<- 'iviewsense'
