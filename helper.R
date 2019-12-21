@@ -92,21 +92,44 @@ formatData <- function(data) {
     return(data)
 }
 
-updateDefectInDB <- function(id, defect_cat, causeEffectData) {
-    # print(paste0("UPDATE testresults SET Defects_Category = ", defect_cat, " WHERE id = ", id))
+formatRemoteData <- function(data) {
+    names(data)[1:10] <- static_names
+    pass_regex <- "^[pP]|^(ok)|^(OK)|^(Ok)"
+    data$has_passed <- str_detect(data$Result, pass_regex)
+    data$Result[data$has_passed] <- "Pass"
+    data$Result[!data$has_passed] <- "Fail"
+    data$has_passed <- NULL
+    if (str_detect(data$Date_Time[1], "-")) {
+        data$Date_Time <- as.POSIXct(data$Date_Time, format = "%d-%b-%Y %H:%M:%S")
+    } else {
+        data$Date_Time <- as.POSIXct(data$Date_Time, format = "%d %b %Y %H %M %S")
+    }
+    data$shift <- getShifts(data$Date_Time)
+    data$Date <- as.Date(data$Date_Time, tz = "")
+    data$Defects_Qty <- 1
+    old_direction <- data$Direction
+    suppressWarnings(
+        data[,11:(ncol(data) - 5)] <- data.frame(lapply(data[,11:(ncol(data) - 5)], function(x) as.numeric(as.character(x))))
+    )
+    data$Direction <- old_direction
+    return(data)
+}
+
+updateDefectInDB <- function(table_name, id, defect_cat, causeEffectData) {
+    print(paste0("UPDATE ", table_name, " SET DEFECTS_CATEGORY = ", defect_cat, " WHERE id = ", id))
     execute(
-        "UPDATE testresults SET Defects_Category = ? WHERE id = ?",
+        paste0("UPDATE ", table_name, " SET DEFECTS_CATEGORY = ? WHERE id = ?"),
         list(defect_cat, id)
     )
     execute(
-        "UPDATE testresults SET cause = ? WHERE id = ?",
+        paste0("UPDATE ", table_name, " SET CAUSE = ? WHERE id = ?"),
         list(fishBoneSkeleton, id)
     )
 }
 
-updateNewCause <- function(id, causeJSON) {
+updateNewCause <- function(table_name, id, causeJSON) {
     execute(
-        'UPDATE testresults SET cause = ? WHERE id = ?',
+        paste0("UPDATE ", table_name, " SET CAUSE = ? WHERE id = ?"),
         list(causeJSON, id)
     )
 }

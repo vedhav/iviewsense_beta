@@ -20,8 +20,8 @@ data_source_body <- bs4TabItem(
 							inputId = "remote_or_local",
 							label_on = "Use remote database",
 							label_off = "Use local csv or excel file",
-							icon_on = icon("file-excel"),
-							icon_off = icon("database"),
+							icon_on = icon("database"),
+							icon_off = icon("file-excel"),
 							status_on = "default",
 							status_off = "default",
 							bigger = TRUE

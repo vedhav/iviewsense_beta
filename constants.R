@@ -22,8 +22,9 @@ fish_bone__trigger <<- makeReactiveTrigger()
 machinesList <<- c("Geartek", "Testek", "Elnix", "Dynaspede", "RT Tek")
 shiftNames <<- c("Shift One", "Shift Two", "Shift Three")
 timeFilterTypes <<- c("Date", "Month", "Year")
-passName <<- "Pass!"
-failName <<- "Fail!"
+passName <<- "Pass"
+failName <<- "Fail"
+static_names <<- c("id", "Machine", "Date_Time", "Family", "Cust", "Model", "Gear_No", "Stn", "Opr", "Result")
 dataColumnNames <<- c(
 	'Date_Time', 'Machine', 'Family', 'Cust', 'Model', 'Gear_No', 'Stn', 'Opr', 'Result', 'Defects_Category',
 	'NPD', 'Flow', 'Tempr', 'Leak_CW', 'Leak_CCW', 'Leak_Pr_CW', 'Leak_Pr_CCW',
@@ -78,41 +79,11 @@ resultOptions <- NULL
 operatorOptions <- NULL
 machineOptions <- NULL
 
-
-# Database related constants
-# 
-# # PostgreSQL
-# # databaseDriver <<- dbDriver("PostgreSQL")
-# connectionAdapter <<- "postgres"
-# hostUserName <<- 'postgres'
-# hostPassword <<- 'admin@123'
-# hostIP <<- '127.0.0.1'
-# dbPort <<- 5432
-# dbName <<- 'rane'
-
 # MySQL
-# # local
-# databaseDriver <<- MySQL()
-# connectionAdapter <<- "mysql"
-# hostUserName <<- 'root'
-# hostPassword <<- 'admin@123'
-# hostIP <<- '127.0.0.1'
-# dbPort <<- 3306
-# dbName <<- 'rane'
-# live
-# databaseDriver <<- MySQL()
-# connectionAdapter <<- "mysql"
-# hostUserName <<- 'iviewsen_ivsadmn'
-# hostPassword <<- 'Good2019$'
-# hostIP <<- '199.79.62.17'
-# dbPort <<- 3306
-# dbName <<- 'iviewsen_testresults'
-
-# new live
 databaseDriver <<- MySQL()
 connectionAdapter <<- "mysql"
-hostUserName <<- 'vedha'
-hostPassword <<- 'vMySQLPassword12!@'
-hostIP <<- '159.65.150.205'
+hostUserName <<- 'root'
+hostPassword <<- 'admin@123'
+hostIP <<- '127.0.0.1'
 dbPort <<- 3306
-dbName <<- 'iviewsense'
+dbName <<- 'test'

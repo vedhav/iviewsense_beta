@@ -2,7 +2,8 @@ source("global.R")
 
 ui = tags$div(
 	tags$head(
-		tags$link(rel = "shortcut icon", type = "image/png", href = "iviewsense.png")
+		tags$link(rel = "shortcut icon", type = "image/png", href = "iviewsense.png"),
+		tags$base(target = "_blank")
 	),
 	useShinyjs(),
 	useShinyalert(),
@@ -108,6 +109,8 @@ server = function(input, output, session) {
 	checkSheetFilterData <- data.frame()
 	checkSheetFilterDataDisplay <- data.frame()
 	checkSheetCreateData <- data.frame()
+	config_table <- data.frame()
+	currentTableName <- ""
 
 	######################################## DATA SOURCE ########################################
 	observeEvent(input$remote_or_local, {
@@ -132,21 +135,58 @@ server = function(input, output, session) {
 					)
 				)
 			} else {
-				ui <- HTML("The data from MySQL database will be used for analysis!")
-				mainData <<- selectDbQuery("SELECT * FROM testresults") %>% formatData()
-				minDate <<- as.Date(min(mainData$Date_Time), tz = "")
-				maxDate <<- as.Date(max(mainData$Date_Time), tz = "")
-				familyOptions <<- unique(mainData$Family)
-				custOptions <<- unique(mainData$Cust)
-				modelOptions <<- unique(mainData$Model)
-				resultOptions <<- unique(mainData$Result)
-				operatorOptions <<- unique(mainData$Opr)
-				machineOptions <<- unique(mainData$Machine)
-				hasDbConnection <<- TRUE
-				plots__trigger$trigger()
+				config_table <<- selectDbQuery("SELECT * FROM config")
+				config_family_options <- unique(config_table$FAMILY)
+				ui <- fluidRow(
+					column(4, pickerInput("config_family", "Family", config_family_options, config_family_options[1])),
+					column(4, pickerInput("config_customer", "Customer", "", "")),
+					column(4, pickerInput("config_model", "Model", "", ""))
+				)
+				# ui <- HTML("The data from MySQL database will be used for analysis!")
+				# mainData <<- selectDbQuery("SELECT * FROM testresults") %>% formatData()
+				# minDate <<- as.Date(min(mainData$Date_Time), tz = "")
+				# maxDate <<- as.Date(max(mainData$Date_Time), tz = "")
+				# familyOptions <<- unique(mainData$Family)
+				# custOptions <<- unique(mainData$Cust)
+				# modelOptions <<- unique(mainData$Model)
+				# resultOptions <<- unique(mainData$Result)
+				# operatorOptions <<- unique(mainData$Opr)
+				# machineOptions <<- unique(mainData$Machine)
+				# hasDbConnection <<- TRUE
+				# plots__trigger$trigger()
 			}
 			return(ui)
 		})
+	})
+	observeEvent(input$config_family, {
+		config_table_filtered <- config_table %>% filter(FAMILY == input$config_family)
+		config_customer_options <- unique(config_table_filtered$CUSTOMER)
+		updatePickerInput(session, "config_customer", choices = config_customer_options, selected = config_customer_options[1])
+	})
+	observeEvent(input$config_customer, {
+		config_table_filtered <- config_table %>% filter(FAMILY == input$config_family) %>%
+			filter(CUSTOMER == input$config_customer)
+		config_customer_options <- unique(config_table_filtered$MODEL)
+		updatePickerInput(session, "config_model", choices = config_customer_options, selected = config_customer_options[1])
+	})
+	observeEvent(input$config_model, {
+		config_table_filtered <- config_table %>% filter(FAMILY == input$config_family) %>%
+			filter(CUSTOMER == input$config_customer) %>% filter(MODEL == input$config_model)
+		if (nrow(config_table_filtered) != 0) {
+			currentTableName <<- config_table_filtered$TABLE_NAME[1]
+			print(paste0("Fetching data from ", config_table_filtered$TABLE_NAME[1]))
+			mainData <<- selectDbQuery(paste0("SELECT * FROM ", config_table_filtered$TABLE_NAME[1])) %>% formatRemoteData()
+			minDate <<- as.Date(min(mainData$Date_Time), tz = "")
+			maxDate <<- as.Date(max(mainData$Date_Time), tz = "")
+			familyOptions <<- unique(mainData$Family)
+			custOptions <<- unique(mainData$Cust)
+			modelOptions <<- unique(mainData$Model)
+			resultOptions <<- unique(mainData$Result)
+			operatorOptions <<- unique(mainData$Opr)
+			machineOptions <<- unique(mainData$Machine)
+			hasDbConnection <<- TRUE
+			plots__trigger$trigger()
+		}
 	})
 	observeEvent(input$data_source_input_file, {
 		inFile <- input$data_source_input_file
@@ -552,7 +592,7 @@ server = function(input, output, session) {
 				4,
 				pickerInput(
 					"scatter_plot_x_axis", "Select the X axis variable",
-					numericPlotVariables, "CW_1",
+					numericPlotVariables, numericPlotVariables[1],
 					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
 				)
 			),
@@ -560,7 +600,7 @@ server = function(input, output, session) {
 				4,
 				pickerInput(
 					"scatter_plot_y_axis", "Select the X axis variable",
-					numericPlotVariables, "CCW_1",
+					numericPlotVariables, numericPlotVariables[2],
 					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
 				)
 			),
@@ -576,15 +616,7 @@ server = function(input, output, session) {
 	})
 	output$scatter_plot <- renderPlotly({
 		plots__trigger$depend()
-		req(input$scatter_plot_filters_family)
-		req(input$scatter_plot_filters_cust)
-		req(input$scatter_plot_filters_model)
-		req(input$scatter_plot_filters_result)
-		req(input$scatter_plot_filters_date_from)
-		req(input$scatter_plot_filters_date_to)
-		req(input$scatter_plot_filters_shift)
-		req(input$scatter_plot_filters_operator)
-		req(input$scatter_plot_filters_machine)
+		if (nrow(mainData) == 0) return(ggplotly(textPlot()))
 		plotData <- mainData %>%
 			filter(
 				Family %in% input$scatter_plot_filters_family & Cust %in% input$scatter_plot_filters_cust &
@@ -596,8 +628,9 @@ server = function(input, output, session) {
 		if (nrow(plotData) == 0) return(ggplotly(textPlot()))
 		if (input$scatter_plot_color_axis == "No color") {
 			xyPlotData <- plotData %>% select(one_of(input$scatter_plot_x_axis, input$scatter_plot_y_axis))
-			xyPlotData <- xyPlotData[complete.cases(xyPlotData), ]
-			if (nrow(xyPlotData) == 0) return(ggplotly(textPlot()))
+			if (ncol(xyPlotData) != 1) {
+				xyPlotData <- xyPlotData[complete.cases(xyPlotData), ]
+			}
 			xVariable <- xyPlotData[[input$scatter_plot_x_axis]]
 			yVariable <- xyPlotData[[input$scatter_plot_y_axis]]
 			plot <- plot_ly(
@@ -693,13 +726,8 @@ server = function(input, output, session) {
 		)
 	})
 	output$stratification_table <- function() {
-		plots__trigger$depend()
-		req(input$stratification_filters_date_from)
-		req(input$stratification_filters_date_to)
 		req(input$stratification_filters_family)
-		req(input$stratification_filters_cust)
-		req(input$stratification_filters_model)
-		req(input$stratification_filters_operator)
+		plots__trigger$depend()
 		if (nrow(mainData) == 0) return(data.frame())
 		filterData <- mainData %>%
 			filter(
@@ -729,12 +757,6 @@ server = function(input, output, session) {
 		dayOfWeekPlotData <- passCountData %>% group_by(DayOfWeek) %>%
 			summarise(ftr_percentage = round(sum(passCount) / (sum(passCount) + sum(failCount)) * 100, 1))
 		output$stratification_shift <- renderPlotly({
-			req(input$stratification_filters_date_from)
-			req(input$stratification_filters_date_to)
-			req(input$stratification_filters_family)
-			req(input$stratification_filters_cust)
-			req(input$stratification_filters_model)
-			req(input$stratification_filters_operator)
 			if (nrow(shiftPlotData) == 0) return(ggplotly(textPlot()))
 			plot_ly(
 				data = shiftPlotData,
@@ -751,12 +773,6 @@ server = function(input, output, session) {
 			) %>% config(displayModeBar = FALSE)
 		})
 		output$stratification_family <- renderPlotly({
-			req(input$stratification_filters_date_from)
-			req(input$stratification_filters_date_to)
-			req(input$stratification_filters_family)
-			req(input$stratification_filters_cust)
-			req(input$stratification_filters_model)
-			req(input$stratification_filters_operator)
 			if (nrow(familyPlotData) == 0) return(ggplotly(textPlot()))
 			plot_ly(
 				data = familyPlotData,
@@ -773,12 +789,6 @@ server = function(input, output, session) {
 			) %>% config(displayModeBar = FALSE)
 		})
 		output$stratification_customer <- renderPlotly({
-			req(input$stratification_filters_date_from)
-			req(input$stratification_filters_date_to)
-			req(input$stratification_filters_family)
-			req(input$stratification_filters_cust)
-			req(input$stratification_filters_model)
-			req(input$stratification_filters_operator)
 			if (nrow(customerPlotData) == 0) return(ggplotly(textPlot()))
 			plot_ly(
 				data = customerPlotData,
@@ -795,12 +805,6 @@ server = function(input, output, session) {
 			) %>% config(displayModeBar = FALSE)
 		})
 		output$stratification_model <- renderPlotly({
-			req(input$stratification_filters_date_from)
-			req(input$stratification_filters_date_to)
-			req(input$stratification_filters_family)
-			req(input$stratification_filters_cust)
-			req(input$stratification_filters_model)
-			req(input$stratification_filters_operator)
 			if (nrow(modelPlotData) == 0) return(ggplotly(textPlot()))
 			plot_ly(
 				data = modelPlotData,
@@ -816,12 +820,6 @@ server = function(input, output, session) {
 			) %>% config(displayModeBar = FALSE)
 		})
 		output$stratification_operator <- renderPlotly({
-			req(input$stratification_filters_date_from)
-			req(input$stratification_filters_date_to)
-			req(input$stratification_filters_family)
-			req(input$stratification_filters_cust)
-			req(input$stratification_filters_model)
-			req(input$stratification_filters_operator)
 			if (nrow(operatorPlotData) == 0) return(ggplotly(textPlot()))
 			plot_ly(
 				data = operatorPlotData,
@@ -838,12 +836,6 @@ server = function(input, output, session) {
 			) %>% config(displayModeBar = FALSE)
 		})
 		output$stratification_day_of_week <- renderPlotly({
-			req(input$stratification_filters_date_from)
-			req(input$stratification_filters_date_to)
-			req(input$stratification_filters_family)
-			req(input$stratification_filters_cust)
-			req(input$stratification_filters_model)
-			req(input$stratification_filters_operator)
 			if (nrow(dayOfWeekPlotData) == 0) return(ggplotly(textPlot()))
 			plot_ly(
 				data = dayOfWeekPlotData,
@@ -886,8 +878,9 @@ server = function(input, output, session) {
 			Date <= toDateFilter & Model %in% modelFilter & operatorFilter %in% operatorFilter &
 			Result == failName
 		)
+		View(checkSheetFilterData)
 		checkSheetFilterDataDisplay <<- checkSheetFilterData %>%
-			select(Date, shift, Model, "Defects Category" = Defects_Category) %>% mutate("Defects Quantity" = 1)
+			select(Date, shift, Model, "Defects Category" = DEFECTS_CATEGORY) %>% mutate("Defects Quantity" = 1)
 		output$check_sheet_table_ui <- renderDT({
 			datatable(
 				checkSheetFilterDataDisplay,
@@ -912,12 +905,12 @@ server = function(input, output, session) {
 					Cust = checkSheetFilterData[info$row, "Cust"],
 					Model = checkSheetFilterData[info$row, "Model"]
 				)
-				if (hasDbConnection) updateDefectInDB(id = row_id, defect_cat = info$value, causeEffectData)
-				checkSheetFilterData$Defects_Category[checkSheetFilterData$id == row_id] <<- info$value
+				if (hasDbConnection) updateDefectInDB(table_name = currentTableName, id = row_id, defect_cat = info$value, causeEffectData)
+				checkSheetFilterData$DEFECTS_CATEGORY[checkSheetFilterData$id == row_id] <<- info$value
 				checkSheetFilterDataDisplay[info$row, "Defects Category"] <<- info$value
-				mainData[mainData$id == row_id, "Defects_Category"] <<- info$value
-				mainData[mainData$id == row_id, "cause"] <<- fishBoneSkeleton
-				plotData <- mainData %>% filter(Defects_Category %in% defectsCategories)
+				mainData[mainData$id == row_id, "DEFECTS_CATEGORY"] <<- info$value
+				mainData[mainData$id == row_id, "CAUSE"] <<- fishBoneSkeleton
+				plotData <- mainData %>% filter(DEFECTS_CATEGORY %in% defectsCategories)
 				pareto__trigger$trigger()
 				replaceData(tableOutputProxy, checkSheetFilterDataDisplay, resetPaging = FALSE, rownames = FALSE)
 			} else {
@@ -950,9 +943,9 @@ server = function(input, output, session) {
 	output$pareto_filters <- renderUI({
 		plots__trigger$depend()
 		pareto__trigger$depend()
-		tableData <- mainData %>% filter(Defects_Category %in% defectsCategories)
+		tableData <- mainData %>% filter(DEFECTS_CATEGORY %in% defectsCategories)
 		if (nrow(tableData) == 0) return()
-		defectsList <- unique(tableData$Defects_Category)
+		defectsList <- unique(tableData$DEFECTS_CATEGORY)
 		familyList <- unique(tableData$Family)
 		customerList <- unique(tableData$Cust)
 		modelList <- unique(tableData$Model)
@@ -1028,12 +1021,12 @@ server = function(input, output, session) {
 	output$pareto_plot <- renderPlot({
 		plots__trigger$depend()
 		pareto__trigger$depend()
-		plotData <- mainData %>% filter(Defects_Category %in% defectsCategories)
+		plotData <- mainData %>% filter(DEFECTS_CATEGORY %in% defectsCategories)
 		if (nrow(plotData) == 0) return(textPlot("Please add Defects from the Stratification tab to get the Pareto chart"))
 		plotData <- tryCatch({
 			plotData %>%
 			filter(
-				Defects_Category %in% input$pareto_filters_defects & Family %in% input$pareto_filters_family &
+				DEFECTS_CATEGORY %in% input$pareto_filters_defects & Family %in% input$pareto_filters_family &
 				Cust %in% input$pareto_filters_customer & Model %in% input$pareto_filters_model &
 				shift %in% input$pareto_filters_shift & Machine %in% input$pareto_filters_machine &
 				Date >= input$pareto_filters_date_from & Date <= input$pareto_filters_date_to
@@ -1041,9 +1034,9 @@ server = function(input, output, session) {
 		}, error = function(err) { return(data.frame()) })
 		if (nrow(plotData) == 0) return(textPlot())
 		plotData$Defects_Qty <- as.numeric(plotData$Defects_Qty)
-		plotData <- plotData %>% group_by(Defects_Category) %>% summarise(count_defects = sum(Defects_Qty)) %>% ungroup()
+		plotData <- plotData %>% group_by(DEFECTS_CATEGORY) %>% summarise(count_defects = sum(Defects_Qty)) %>% ungroup()
 		defect <- plotData$count_defects
-		names(defect) <- plotData$Defects_Category
+		names(defect) <- plotData$DEFECTS_CATEGORY
 		pareto.chart(defect, ylab = "Frequency of defects")
 	})
 	output$pareto_tables <- renderDT({
@@ -1051,19 +1044,19 @@ server = function(input, output, session) {
 		pareto__trigger$depend()
 		causeEffectData <- mainData %>%
 			filter(
-				Defects_Category %in% input$pareto_filters_defects & Family %in% input$pareto_filters_family &
+				DEFECTS_CATEGORY %in% input$pareto_filters_defects & Family %in% input$pareto_filters_family &
 				Cust %in% input$pareto_filters_customer & Model %in% input$pareto_filters_model &
 				shift %in% input$pareto_filters_shift
 			) %>%
 			select(
 				id, Date, Shift = shift, Machine, Customer = Cust, Family, Model,
-				"Defect Category" = Defects_Category, cause
+				"Defect Category" = DEFECTS_CATEGORY, CAUSE
 			)
 		if (nrow(causeEffectData) == 0) return(data.frame())
-		leftData <- causeEffectData %>% select(-c(cause))
+		leftData <- causeEffectData %>% select(-c(CAUSE))
 		outData <- data.frame()
 		for (i in 1:nrow(causeEffectData)) {
-			causeFromJson <- fromJSON(causeEffectData$cause[i]) %>%
+			causeFromJson <- fromJSON(causeEffectData$CAUSE[i]) %>%
 				arrange(Man_Cause, Method_Cause, Machine_Cause, Material_Cause, Measurement_Cause, Environment_Cause)
 			causeFromJson <- causeFromJson[
 				order(causeFromJson$Man_Cause, causeFromJson$Method_Cause,
@@ -1097,9 +1090,9 @@ server = function(input, output, session) {
 				select(Man_Cause, Method_Cause, Machine_Cause, Material_Cause, Measurement_Cause, Environment_Cause)
 			updateCause <- toJSON(updateData)
 			if (hasDbConnection) {
-				updateNewCause(updateId, updateCause)
+				updateNewCause(table_name = currentTableName, updateId, updateCause)
 			}
-			mainData[mainData$id == updateId, "cause"] <<- updateCause
+			mainData[mainData$id == updateId, "CAUSE"] <<- updateCause
 			fish_bone__trigger$trigger()
 		}
 	})
@@ -1108,9 +1101,9 @@ server = function(input, output, session) {
 	output$cause_effect_filters <- renderUI({
 		plots__trigger$depend()
 		pareto__trigger$depend()
-		tableData <- mainData %>% filter(Defects_Category %in% defectsCategories)
+		tableData <- mainData %>% filter(DEFECTS_CATEGORY %in% defectsCategories)
 		if (nrow(tableData) == 0) return()
-		defectsOptions <- unique(tableData$Defects_Category)
+		defectsOptions <- unique(tableData$DEFECTS_CATEGORY)
 		familyOptions <- unique(tableData$Family)
 		custOptions <- unique(tableData$Cust)
 		modelOptions <- unique(tableData$Model)
@@ -1185,12 +1178,12 @@ server = function(input, output, session) {
 	observeEvent(c(input$cause_effect_filters_family, input$cause_effect_filters_cust, input$cause_effect_filters_model), {
 		tableData <- mainData %>%
 			filter(
-				Defects_Category %in% defectsCategories & Family %in% input$cause_effect_filters_family &
+				DEFECTS_CATEGORY %in% defectsCategories & Family %in% input$cause_effect_filters_family &
 				Cust %in% input$cause_effect_filters_cust & Model %in% input$cause_effect_filters_model &
 				Date >= input$cause_effect_filters_date_from & Date <= input$cause_effect_filters_date_to &
 				Machine %in% input$cause_effect_filters_machine & shift %in% input$cause_effect_filters_shift
 			)
-			defectsOptions <- unique(tableData$Defects_Category)
+			defectsOptions <- unique(tableData$DEFECTS_CATEGORY)
 			updatePickerInput(session, "cause_effect_filters_defect_cat", selected = defectsOptions[1], choices = defectsOptions)
 	})
 	output$cause_effect_fish_bone_plot <- renderPlot({
@@ -1200,25 +1193,25 @@ server = function(input, output, session) {
 		plotData <- tryCatch({
 			mainData %>%
 			filter(
-				Defects_Category %in% defectsCategories & Family %in% input$cause_effect_filters_family &
+				DEFECTS_CATEGORY %in% defectsCategories & Family %in% input$cause_effect_filters_family &
 				Cust %in% input$cause_effect_filters_cust & Model %in% input$cause_effect_filters_model &
 				Date >= input$cause_effect_filters_date_from & Date <= input$cause_effect_filters_date_to &
 				Machine %in% input$cause_effect_filters_machine & shift %in% input$cause_effect_filters_shift &
-				Defects_Category == input$cause_effect_filters_defect_cat
-			) %>% select(Family, Cust, Model, Defects_Category, cause)
+				DEFECTS_CATEGORY == input$cause_effect_filters_defect_cat
+			) %>% select(Family, Cust, Model, DEFECTS_CATEGORY, CAUSE)
 		}, error = function(err) { return(data.frame()) })
 		if (nrow(plotData) == 0) return(textPlot())
-		plotCause <- removeEmptyFishbones(as.list(fromJSON(plotData$cause[1])))
+		plotCause <- removeEmptyFishbones(as.list(fromJSON(plotData$CAUSE[1])))
 		cause.and.effect(
 			cause = plotCause,
-			effect = plotData$Defects_Category[1]
+			effect = plotData$DEFECTS_CATEGORY[1]
 		)
 	})
 
 	######################################## CLOSE R PROCESS WHEN SESSION ENDS ########################################
-	session$onSessionEnded(function() {
-		stopApp()
-	})
+	# session$onSessionEnded(function() {
+	# 	stopApp()
+	# })
 }
 
 shinyApp(ui, server)
