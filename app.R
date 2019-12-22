@@ -136,11 +136,12 @@ server = function(input, output, session) {
 				)
 			} else {
 				config_table <<- selectDbQuery("SELECT * FROM config")
-				config_family_options <- unique(config_table$FAMILY)
+				config_machine_options <- unique(config_table$Machine)
 				ui <- fluidRow(
-					column(4, pickerInput("config_family", "Family", config_family_options, config_family_options[1])),
-					column(4, pickerInput("config_customer", "Customer", "", "")),
-					column(4, pickerInput("config_model", "Model", "", ""))
+					column(3, pickerInput("config_machine", "Machine", config_machine_options, config_machine_options[1])),
+					column(3, pickerInput("config_customer", "Customer", "", "")),
+					column(3, pickerInput("config_family", "Family", "", "")),
+					column(3, pickerInput("config_model", "Model", "", ""))
 				)
 				# ui <- HTML("The data from MySQL database will be used for analysis!")
 				# mainData <<- selectDbQuery("SELECT * FROM testresults") %>% formatData()
@@ -158,24 +159,41 @@ server = function(input, output, session) {
 			return(ui)
 		})
 	})
-	observeEvent(input$config_family, {
-		config_table_filtered <- config_table %>% filter(FAMILY == input$config_family)
+	observeEvent(input$config_machine, {
+		config_table_filtered <- config_table %>% filter(Machine == input$config_machine)
 		config_customer_options <- unique(config_table_filtered$CUSTOMER)
 		updatePickerInput(session, "config_customer", choices = config_customer_options, selected = config_customer_options[1])
 	})
 	observeEvent(input$config_customer, {
-		config_table_filtered <- config_table %>% filter(FAMILY == input$config_family) %>%
+		config_table_filtered <- config_table %>% filter(Machine == input$config_machine) %>%
 			filter(CUSTOMER == input$config_customer)
-		config_customer_options <- unique(config_table_filtered$MODEL)
-		updatePickerInput(session, "config_model", choices = config_customer_options, selected = config_customer_options[1])
+		config_family_options <- unique(config_table_filtered$FAMILY)
+		updatePickerInput(session, "config_family", choices = config_family_options, selected = config_family_options[1])
+	})
+	observeEvent(input$config_family, {
+		config_table_filtered <- config_table %>% filter(Machine == input$config_machine) %>%
+			filter(CUSTOMER == input$config_customer) %>% filter(FAMILY == input$config_family)
+		config_model_options <- unique(config_table_filtered$MODEL)
+		updatePickerInput(session, "config_model", choices = config_model_options, selected = config_model_options[1])
 	})
 	observeEvent(input$config_model, {
-		config_table_filtered <- config_table %>% filter(FAMILY == input$config_family) %>%
-			filter(CUSTOMER == input$config_customer) %>% filter(MODEL == input$config_model)
+		config_table_filtered <- config_table %>% filter(Machine == input$config_machine) %>%
+			filter(CUSTOMER == input$config_customer) %>% filter(FAMILY == input$config_family) %>%
+			filter(MODEL == input$config_model)
 		if (nrow(config_table_filtered) != 0) {
 			currentTableName <<- config_table_filtered$TABLE_NAME[1]
 			print(paste0("Fetching data from ", config_table_filtered$TABLE_NAME[1]))
-			mainData <<- selectDbQuery(paste0("SELECT * FROM ", config_table_filtered$TABLE_NAME[1])) %>% formatRemoteData()
+			raw_data <- selectDbQuery(paste0("SELECT * FROM ", config_table_filtered$TABLE_NAME[1]))
+			mainData <<- tryCatch({
+				selectDbQuery(paste0("SELECT * FROM ", config_table_filtered$TABLE_NAME[1])) %>% formatRemoteData()
+			}, error = function(err) {
+				popUpWindow("The data is not of the proper format, please select some other option.")
+				return(data.frame())
+			})
+			if (nrow(mainData) == 0) {
+				popUpWindow("The date format is not of the proper format, please select some other option.")
+				return()
+			}
 			minDate <<- as.Date(min(mainData$Date_Time), tz = "")
 			maxDate <<- as.Date(max(mainData$Date_Time), tz = "")
 			familyOptions <<- unique(mainData$Family)
@@ -349,29 +367,33 @@ server = function(input, output, session) {
 			})
 			return(returnPlot)
 		})
-		matrixData <- matrix(cbind(plot_variable[1:length(plot_variable) - 1], plot_variable[2:length(plot_variable)]), ncol = 2)
-		outPlot <- qcc(data = matrixData, type = "R", plot = FALSE)
-		lslValue <- round(outPlot$limits[1], 2)
-		uslValue <- round(outPlot$limits[2], 2)
-		updateNumericInput(
-			session, "control_chart_r_lcl", value = lslValue
-			# label = HTML(paste0("Enter the LCL (mean - 3 x sd = ", lslValue, ")"))
-		)
-		updateNumericInput(
-			session, "control_chart_r_ucl", value = uslValue
-			# label = HTML(paste0("Enter the UCL (mean + 3 x sd = ", uslValue, ")"))
-		)
-		output$control_chart_plot_xbar_r <- renderPlot({
-			plots__trigger$depend()
-			returnPlot <- tryCatch({
-				qcc(
-					data = matrixData, type = "R",
-					limits = c(input$control_chart_r_lcl, input$control_chart_r_ucl)
-				)
-			}, error = function(err) {
-				returnPlot <- textPlot(paste0("There is no proper data for ", input$control_chart_column))
+		tryCatch({
+			matrixData <- matrix(cbind(plot_variable[1:length(plot_variable) - 1], plot_variable[2:length(plot_variable)]), ncol = 2)
+			outPlot <- qcc(data = matrixData, type = "R", plot = FALSE)
+			lslValue <- round(outPlot$limits[1], 2)
+			uslValue <- round(outPlot$limits[2], 2)
+			updateNumericInput(
+				session, "control_chart_r_lcl", value = lslValue
+				# label = HTML(paste0("Enter the LCL (mean - 3 x sd = ", lslValue, ")"))
+			)
+			updateNumericInput(
+				session, "control_chart_r_ucl", value = uslValue
+				# label = HTML(paste0("Enter the UCL (mean + 3 x sd = ", uslValue, ")"))
+			)
+			output$control_chart_plot_xbar_r <- renderPlot({
+				plots__trigger$depend()
+				returnPlot <- tryCatch({
+					qcc(
+						data = matrixData, type = "R",
+						limits = c(input$control_chart_r_lcl, input$control_chart_r_ucl)
+					)
+				}, error = function(err) {
+					returnPlot <- textPlot(paste0("There is no proper data for ", input$control_chart_column))
+				})
+				return(returnPlot)
 			})
-			return(returnPlot)
+		}, error = function(err) {
+			return(textPlot(paste0("There is no proper data for ", input$control_chart_column)))
 		})
 	})
 
@@ -878,7 +900,6 @@ server = function(input, output, session) {
 			Date <= toDateFilter & Model %in% modelFilter & operatorFilter %in% operatorFilter &
 			Result == failName
 		)
-		View(checkSheetFilterData)
 		checkSheetFilterDataDisplay <<- checkSheetFilterData %>%
 			select(Date, shift, Model, "Defects Category" = DEFECTS_CATEGORY) %>% mutate("Defects Quantity" = 1)
 		output$check_sheet_table_ui <- renderDT({

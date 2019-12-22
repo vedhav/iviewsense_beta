@@ -99,11 +99,19 @@ formatRemoteData <- function(data) {
     data$Result[data$has_passed] <- "Pass"
     data$Result[!data$has_passed] <- "Fail"
     data$has_passed <- NULL
-    if (str_detect(data$Date_Time[1], "-")) {
-        data$Date_Time <- as.POSIXct(data$Date_Time, format = "%d-%b-%Y %H:%M:%S")
-    } else {
-        data$Date_Time <- as.POSIXct(data$Date_Time, format = "%d %b %Y %H %M %S")
-    }
+    data$Date_Time <- as.POSIXct(data$Date_Time, format = "%d-%m-%Y %H:%M:%S")
+    # if (str_detect(data$Date_Time[1], "[0-9]{2}-[0-9]{2}-[0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2}")) {
+    #     data$Date_Time <- as.POSIXct(data$Date_Time, format = "%d-%m-%Y %H:%M:%S")
+    # } else if (str_detect(data$Date_Time[1], "[0-9]{2} [0-9]{2} [0-9]{4} [0-9]{2} [0-9]{2} [0-9]{2}")) {
+    #     data$Date_Time <- as.POSIXct(data$Date_Time, format = "%d %m %Y %H %M %S")
+    # } else if (str_detect(data$Date_Time[1], "[0-9]{2} [a-zA-Z]+ [0-9]{4} [0-9]{2} [0-9]{2} [0-9]{2}")) {
+    #     data$Date_Time <- as.POSIXct(data$Date_Time, format = "%d %b %Y %H %M %S")
+    # } else if (str_detect(data$Date_Time[1], "[0-9]{2}-[a-zA-Z]+-[0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2}")) {
+    #     data$Date_Time <- as.POSIXct(data$Date_Time, format = "%d %b %Y %H:%M:%S")
+    # } else {
+    #     data$Date_Time <- as.POSIXct(data$Date_Time)
+    # }
+    data <- data %>% filter(!is.na(Date_Time))
     data$shift <- getShifts(data$Date_Time)
     data$Date <- as.Date(data$Date_Time, tz = "")
     data$Defects_Qty <- 1
@@ -114,6 +122,8 @@ formatRemoteData <- function(data) {
     data$Direction <- old_direction
     return(data)
 }
+
+
 
 updateDefectInDB <- function(table_name, id, defect_cat, causeEffectData) {
     print(paste0("UPDATE ", table_name, " SET DEFECTS_CATEGORY = ", defect_cat, " WHERE id = ", id))
