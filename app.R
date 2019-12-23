@@ -115,21 +115,22 @@ server = function(input, output, session) {
 	######################################## DATA SOURCE ########################################
 	observeEvent(input$remote_or_local, {
 		output$data_source_body_ui <- renderUI({
-			if (input$remote_or_local %% 2 == 0) {
+			if (input$remote_or_local %% 2 != 0) {
 				ui <- fluidRow(
 					column(
 						12,
 						fileInput(
 							"data_source_input_file",
 							"Upload your file or drag and drop it here",
-							accept = c(".xlsx", ".csv")
+							accept = ".csv"
 						)
 					),
 					column(
 						12, HTML(
 							paste0(
-								"Make sure that the uploaded file has the columns with these names<br>
-								<b>", dataColumnNamesString, "</b>"
+								"Make sure that the first 9 columns contain these values in the same order<br>
+								<b>", dataColumnNamesString, "</b><br>",
+								"And the 'Date Time' Column is of this format '29-12-2019  18:52:27' (date-month-year hour:min:sec)"
 							)
 						)
 					)
@@ -159,7 +160,7 @@ server = function(input, output, session) {
 			return(ui)
 		})
 	})
-	observeEvent(input$config_machine, {
+	observeEvent(c(input$config_machine, input$remote_or_local), {
 		config_table_filtered <- config_table %>% filter(Machine == input$config_machine)
 		config_customer_options <- unique(config_table_filtered$CUSTOMER)
 		updatePickerInput(session, "config_customer", choices = config_customer_options, selected = config_customer_options[1])
@@ -208,16 +209,7 @@ server = function(input, output, session) {
 	})
 	observeEvent(input$data_source_input_file, {
 		inFile <- input$data_source_input_file
-		if (str_detect(inFile$datapath, "\\.xlsx")) {
-			mainData <<- read_xlsx(inFile$datapath, sheet = 1, col_names = TRUE)
-		} else if (str_detect(inFile$datapath, "\\.csv")) {
-			mainData <<- read.csv(inFile$datapath,stringsAsFactors = FALSE, header = TRUE)
-		} else {
-			popUpWindow("This is an invalid file format, please upload a .xlsx or .csv file")
-			return()
-		}
-		names(mainData) <<- dataColumnNames
-		mainData <<- formatData(mainData)
+		mainData <<- read.csv(inFile$datapath, stringsAsFactors = FALSE, header = TRUE) %>% formatLocalData()
 		minDate <<- as.Date(min(mainData$Date_Time), tz = "")
 		maxDate <<- as.Date(max(mainData$Date_Time), tz = "")
 		familyOptions <<- unique(mainData$Family)
@@ -226,7 +218,7 @@ server = function(input, output, session) {
 		resultOptions <<- unique(mainData$Result)
 		operatorOptions <<- unique(mainData$Opr)
 		machineOptions <<- unique(mainData$Machine)
-		mainData$Defects_Qty <<- "1"
+		mainData$Defects_Qty <<- 1
 		hasDbConnection <<- FALSE
 		plots__trigger$trigger()
 	})
@@ -637,6 +629,7 @@ server = function(input, output, session) {
 		)
 	})
 	output$scatter_plot <- renderPlotly({
+		req(input$scatter_plot_filters_family)
 		plots__trigger$depend()
 		if (nrow(mainData) == 0) return(ggplotly(textPlot()))
 		plotData <- mainData %>%

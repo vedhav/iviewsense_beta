@@ -123,6 +123,32 @@ formatRemoteData <- function(data) {
     return(data)
 }
 
+formatLocalData <- function(data) {
+    id_data <- data.frame(
+        id = c(1:nrow(data))
+    )
+    data <- cbind(id_data, data)
+    names(data)[1:10] <- static_names
+    pass_regex <- "^[pP]|^(ok)|^(OK)|^(Ok)"
+    data$has_passed <- str_detect(data$Result, pass_regex)
+    data$Result[data$has_passed] <- "Pass"
+    data$Result[!data$has_passed] <- "Fail"
+    data$has_passed <- NULL
+    data$Date_Time <- as.POSIXct(data$Date_Time, format = "%d-%m-%Y %H:%M:%S")
+    data <- data %>% filter(!is.na(Date_Time))
+    data$shift <- getShifts(data$Date_Time)
+    data$Date <- as.Date(data$Date_Time, tz = "")
+    data$Defects_Qty <- 1
+    old_direction <- data$Direction
+    suppressWarnings(
+        data[,11:(ncol(data) - 5)] <- data.frame(lapply(data[,11:(ncol(data) - 5)], function(x) as.numeric(as.character(x))))
+    )
+    data$Direction <- old_direction
+    data$Opr[is.na(data$Opr)] <- ""
+    data$DEFECTS_CATEGORY <- ""
+    data$CAUSE <- ""
+    return(data)
+}
 
 
 updateDefectInDB <- function(table_name, id, defect_cat, causeEffectData) {

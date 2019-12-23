@@ -11,17 +11,17 @@ data_source_body <- bs4TabItem(
 				column(12, align = "center", style = "font-size: 20px;", "Data Source")
 			),
 			fluidRow(
-				align = "center", style = "margin-top: 15vh",
+				align = "center", style = "margin-top: 5vh",
 				column(
 					12,
 					tags$div(
 						title = "Click to change data source",
 						prettyToggle(
 							inputId = "remote_or_local",
-							label_on = "Use remote database",
-							label_off = "Use local csv or excel file",
-							icon_on = icon("database"),
-							icon_off = icon("file-excel"),
+							label_on = "Use local csv file (click to change)",
+							label_off = "Use remote database (click to change)",
+							icon_on = icon("file-excel"),
+							icon_off = icon("database"),
 							status_on = "default",
 							status_off = "default",
 							bigger = TRUE
