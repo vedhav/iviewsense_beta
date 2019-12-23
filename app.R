@@ -49,6 +49,11 @@ ui = tags$div(
 				opacity = 0.9,
 				bs4SidebarMenu(
 					bs4SidebarMenuItem(
+						text = "Summary",
+						tabName = "summary",
+						icon = "chart-pie"
+					),
+					bs4SidebarMenuItem(
 						text = "Data Source",
 						tabName = "data_source",
 						icon = "database"
@@ -87,6 +92,7 @@ ui = tags$div(
 			),
 			body = bs4DashBody(
 				bs4TabItems(
+					summary_body,
 					data_source_body,
 					control_chart_body,
 					histogram_body,
@@ -110,7 +116,218 @@ server = function(input, output, session) {
 	checkSheetFilterDataDisplay <- data.frame()
 	checkSheetCreateData <- data.frame()
 	config_table <- data.frame()
+	all_table_data <- tibble()
 	currentTableName <- ""
+
+	######################################## SUMMARY ########################################
+	output$summary_body_ui <- renderUI({
+		all_table_data <<- get_all_table_data()
+		min_date <- min(all_table_data$Date)
+		max_date <- max(all_table_data$Date)
+		tags$div(
+			fluidRow(
+				column(
+					2,
+					dateInput(
+						"summary_filters_date_from", "From date",
+						max_date - 10, min_date, max_date
+					)
+				),
+				column(
+					2,
+					dateInput(
+						"summary_filters_date_to", "To date",
+						max_date, min_date, max_date
+					)
+				),
+				column(
+					3, style = "margin-top: 25px;", allign = "left",
+					switchInput(
+						inputId = "summary_stats_type", size = "mini",
+						onLabel = "Show percentage", offLabel = "Show numbers", value = TRUE
+					)
+				)
+			),
+			fluidRow(
+				column(5, plotlyOutput("summary_overall_plot")),
+				column(7, plotlyOutput("summary_number_of_fails_plot")),
+				column(12, br()),
+				column(6, plotlyOutput("summary_machine_plot", height = "500px")),
+				column(6, plotlyOutput("summary_customer_plot", height = "500px")),
+				column(12, br()),
+				column(6, plotlyOutput("summary_family_plot", height = "1200px")),
+				column(6, plotlyOutput("summary_model_plot", height = "1200px"))
+			)
+		)
+	})
+	output$summary_overall_plot <- renderPlotly({
+		req(input$summary_filters_date_from)
+		req(input$summary_filters_date_to)
+		if (nrow(all_table_data) == 0) {
+			return()
+		}
+		plotData <- all_table_data %>% filter(Date >= input$summary_filters_date_from & Date <= input$summary_filters_date_to) %>%
+			group_by(Result) %>% summarise(count = n())
+		plotData$Result[plotData$Result == passName] <- "FTR"
+		plotData$Result[plotData$Result == failName] <- "Fail"
+		plot_ly(
+			data = plotData, labels = ~Result, values = ~count,
+			marker = list(colors = c("#edb009", "#5ac938")),
+			type = 'pie', hole = 0.5
+		) %>% layout(
+			title = "Overall stats",
+			legend = list(y = 0.5)
+		)
+	})
+	output$summary_number_of_fails_plot <- renderPlotly({
+		req(input$summary_filters_date_from)
+		req(input$summary_filters_date_to)
+		if (nrow(all_table_data) == 0) {
+			return()
+		}
+		if (input$summary_stats_type) {
+			plotData <- all_table_data %>% filter(Date >= input$summary_filters_date_from & Date <= input$summary_filters_date_to) %>%
+				group_by(Date, Result) %>% arrange(Date) %>% summarise(count = n())
+			plotDataPass <- plotData %>% filter(Result == passName) %>% select(Date, pass = count)
+			plotDataCount <- plotData %>% group_by(Date) %>% summarise(count = sum(count))
+			plotData <- inner_join(plotDataPass, plotDataCount, by = "Date")
+			plotData$FTR <- round(plotData$pass/plotData$count * 100, 1)
+			plotData$Text <- paste0(round(plotData$FTR, 0), "%")
+			plot <- plot_ly(
+				data = plotData, x = ~Date, y = ~FTR, text = ~Text, textposition = 'auto',
+				marker = list(color = "#5ac938"), type = "bar"
+			) %>% layout(barmode = 'stack', title = "Daily status", legend = list(y = 0.5))
+		} else {
+			plotData <- all_table_data %>% filter(Date >= input$summary_filters_date_from & Date <= input$summary_filters_date_to) %>%
+				group_by(Date, Result) %>% arrange(Date) %>% summarise(count = n())
+			plotData$Date <- format(plotData$Date, format = "%d-%b-%y")
+			plotData$Result[plotData$Result == passName] <- "FTR"
+			plotData$Result[plotData$Result == failName] <- "Fail"
+			plot <- plot_ly(
+				data = plotData, x = ~Date, y = ~count, color = ~Result,
+				colors = c("#edb009", "#5ac938"),
+				type = "bar"
+			) %>% layout(barmode = 'stack', title = "Daily status", legend = list(y = 0.5))
+		}
+		return(plot)
+	})
+	output$summary_machine_plot <- renderPlotly({
+		req(input$summary_filters_date_from)
+		req(input$summary_filters_date_to)
+		if (nrow(all_table_data) == 0) {
+			return()
+		}
+		if (input$summary_stats_type) {
+			plotData <- all_table_data %>% filter(Date >= input$summary_filters_date_from & Date <= input$summary_filters_date_to) %>%
+				group_by(Machine, Result) %>% summarise(count = n())
+			plotDataPass <- plotData %>% filter(Result == passName) %>% select(Machine, pass = count)
+			plotDataCount <- plotData %>% group_by(Machine) %>% summarise(count = sum(count))
+			plotData <- inner_join(plotDataPass, plotDataCount, by = "Machine")
+			plotData$FTR <- round(plotData$pass/plotData$count * 100)
+			plot <- plot_ly(
+				data = plotData, x = ~FTR, y = reorder(plotData$Machine, plotData$FTR),
+				marker = list(color = "#5ac938"), type = "bar"
+			) %>% layout(barmode = 'stack', title = "Machine status", legend = list(y = 0.5))
+		} else {
+			plotData <- all_table_data %>% filter(Date >= input$summary_filters_date_from & Date <= input$summary_filters_date_to) %>%
+				group_by(Machine, Result) %>% summarise(count = n())
+			plotData$Result[plotData$Result == passName] <- "FTR"
+			plotData$Result[plotData$Result == failName] <- "Fail"
+			plot <- plot_ly(
+				data = plotData, x = ~count, y = reorder(plotData$Machine, plotData$count), color = ~Result,
+				colors = c("#edb009", "#5ac938"), type = "bar"
+			) %>% layout(barmode = 'stack', title = "Machine status", legend = list(y = 0.5))
+		}
+		return(plot)
+	})
+	output$summary_customer_plot <- renderPlotly({
+		req(input$summary_filters_date_from)
+		req(input$summary_filters_date_to)
+		if (nrow(all_table_data) == 0) {
+			return()
+		}
+		if (input$summary_stats_type) {
+			plotData <- all_table_data %>% filter(Date >= input$summary_filters_date_from & Date <= input$summary_filters_date_to) %>%
+				group_by(Cust, Result) %>% summarise(count = n())
+			plotDataPass <- plotData %>% filter(Result == passName) %>% select(Cust, pass = count)
+			plotDataCount <- plotData %>% group_by(Cust) %>% summarise(count = sum(count))
+			plotData <- inner_join(plotDataPass, plotDataCount, by = "Cust")
+			plotData$FTR <- round(plotData$pass/plotData$count * 100)
+			plot <- plot_ly(
+				data = plotData, x = ~FTR, y = reorder(plotData$Cust, plotData$FTR),
+				marker = list(color = "#5ac938"), type = "bar"
+			) %>% layout(barmode = 'stack', title = "Customer status", legend = list(y = 0.5))
+		} else {
+			plotData <- all_table_data %>% filter(Date >= input$summary_filters_date_from & Date <= input$summary_filters_date_to) %>%
+				group_by(Cust, Result) %>% summarise(count = n())
+			plotData$Result[plotData$Result == passName] <- "FTR"
+			plotData$Result[plotData$Result == failName] <- "Fail"
+			plot <- plot_ly(
+				data = plotData, x = ~count, y = reorder(plotData$Cust, plotData$count), color = ~Result,
+				colors = c("#edb009", "#5ac938"), type = "bar"
+			) %>% layout(barmode = 'stack', title = "Customer status", legend = list(y = 0.5))
+		}
+		return(plot)
+	})
+	output$summary_family_plot <- renderPlotly({
+		req(input$summary_filters_date_from)
+		req(input$summary_filters_date_to)
+		if (nrow(all_table_data) == 0) {
+			return()
+		}
+		if (input$summary_stats_type) {
+			plotData <- all_table_data %>% filter(Date >= input$summary_filters_date_from & Date <= input$summary_filters_date_to) %>%
+				group_by(Family, Result) %>% summarise(count = n())
+			plotDataPass <- plotData %>% filter(Result == passName) %>% select(Family, pass = count)
+			plotDataCount <- plotData %>% group_by(Family) %>% summarise(count = sum(count))
+			plotData <- inner_join(plotDataPass, plotDataCount, by = "Family")
+			plotData$FTR <- round(plotData$pass/plotData$count * 100)
+			plot <- plot_ly(
+				data = plotData, x = ~FTR, y = reorder(plotData$Family, plotData$FTR),
+				marker = list(color = "#5ac938"), type = "bar"
+			) %>% layout(barmode = 'stack', title = "Family status", legend = list(y = 0.5))
+		} else {
+			plotData <- all_table_data %>% filter(Date >= input$summary_filters_date_from & Date <= input$summary_filters_date_to) %>%
+				group_by(Family, Result) %>% summarise(count = n())
+			plotData$Result[plotData$Result == passName] <- "FTR"
+			plotData$Result[plotData$Result == failName] <- "Fail"
+			plot <- plot_ly(
+				data = plotData, x = ~count, y = reorder(plotData$Family, plotData$count), color = ~Result,
+				colors = c("#edb009", "#5ac938"), type = "bar"
+			) %>% layout(barmode = 'stack', title = "Family status", legend = list(y = 0.5))
+		}
+		return(plot)
+	})
+	output$summary_model_plot <- renderPlotly({
+		req(input$summary_filters_date_from)
+		req(input$summary_filters_date_to)
+		if (nrow(all_table_data) == 0) {
+			return()
+		}
+		if (input$summary_stats_type) {
+			plotData <- all_table_data %>% filter(Date >= input$summary_filters_date_from & Date <= input$summary_filters_date_to) %>%
+				group_by(Model, Result) %>% summarise(count = n())
+			plotDataPass <- plotData %>% filter(Result == passName) %>% select(Model, pass = count)
+			plotDataCount <- plotData %>% group_by(Model) %>% summarise(count = sum(count))
+			plotData <- inner_join(plotDataPass, plotDataCount, by = "Model")
+			plotData$FTR <- round(plotData$pass/plotData$count * 100)
+			plot <- plot_ly(
+				data = plotData, x = ~FTR, y = reorder(plotData$Model, plotData$FTR),
+				marker = list(color = "#5ac938"), type = "bar"
+			) %>% layout(barmode = 'stack', title = "Model status", legend = list(y = 0.5))
+		} else {
+			plotData <- all_table_data %>% filter(Date >= input$summary_filters_date_from & Date <= input$summary_filters_date_to) %>%
+				group_by(Model, Result) %>% summarise(count = n())
+			plotData$Result[plotData$Result == passName] <- "FTR"
+			plotData$Result[plotData$Result == failName] <- "Fail"
+			plot <- plot_ly(
+				data = plotData, x = ~count, y = reorder(plotData$Model, plotData$count), color = ~Result,
+				colors = c("#edb009", "#5ac938"), type = "bar"
+			) %>% layout(barmode = 'stack', title = "Model status", legend = list(y = 0.5))
+		}
+		return(plot)
+	})
+
 
 	######################################## DATA SOURCE ########################################
 	observeEvent(input$remote_or_local, {
@@ -144,18 +361,6 @@ server = function(input, output, session) {
 					column(3, pickerInput("config_family", "Family", "", "")),
 					column(3, pickerInput("config_model", "Model", "", ""))
 				)
-				# ui <- HTML("The data from MySQL database will be used for analysis!")
-				# mainData <<- selectDbQuery("SELECT * FROM testresults") %>% formatData()
-				# minDate <<- as.Date(min(mainData$Date_Time), tz = "")
-				# maxDate <<- as.Date(max(mainData$Date_Time), tz = "")
-				# familyOptions <<- unique(mainData$Family)
-				# custOptions <<- unique(mainData$Cust)
-				# modelOptions <<- unique(mainData$Model)
-				# resultOptions <<- unique(mainData$Result)
-				# operatorOptions <<- unique(mainData$Opr)
-				# machineOptions <<- unique(mainData$Machine)
-				# hasDbConnection <<- TRUE
-				# plots__trigger$trigger()
 			}
 			return(ui)
 		})
@@ -184,9 +389,8 @@ server = function(input, output, session) {
 		if (nrow(config_table_filtered) != 0) {
 			currentTableName <<- config_table_filtered$TABLE_NAME[1]
 			print(paste0("Fetching data from ", config_table_filtered$TABLE_NAME[1]))
-			raw_data <- selectDbQuery(paste0("SELECT * FROM ", config_table_filtered$TABLE_NAME[1]))
 			mainData <<- tryCatch({
-				selectDbQuery(paste0("SELECT * FROM ", config_table_filtered$TABLE_NAME[1])) %>% formatRemoteData()
+				selectDbQuery(paste0("SELECT * FROM `", config_table_filtered$TABLE_NAME[1], "`")) %>% formatRemoteData()
 			}, error = function(err) {
 				popUpWindow("The data is not of the proper format, please select some other option.")
 				return(data.frame())

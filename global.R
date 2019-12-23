@@ -3,6 +3,23 @@ source("constants.R")
 source("helper.R")
 
 
+summary_body <- bs4TabItem(
+	tabName = "summary",
+	tags$div(
+		fluidPage(
+			fluidRow(
+				column(12, align = "center", style = "font-size: 20px;", "Summary")
+			),
+			fluidRow(
+				column(
+					12,
+					uiOutput("summary_body_ui")
+				)
+			)
+		)
+	)
+)
+
 data_source_body <- bs4TabItem(
 	tabName = "data_source",
 	tags$div(

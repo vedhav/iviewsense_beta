@@ -49,6 +49,27 @@ evaluateFailPass <- function(passFail) {
 	return(returnBool)
 }
 
+get_all_table_data <- function() {
+    return_data <- tibble()
+    config_data <- selectDbQuery("SELECT * FROM config")
+    for (i in 1:nrow(config_data)) {
+        current_data <- selectDbQuery(paste0("SELECT * FROM `", config_data$TABLE_NAME[i], "`")) %>% select(1:10) %>% as_tibble()
+        names(current_data) <- static_names
+        pass_regex <- "^[pP]|^(ok)|^(OK)|^(Ok)"
+        current_data$has_passed <- str_detect(current_data$Result, pass_regex)
+        current_data$Result[current_data$has_passed] <- passName
+        current_data$Result[!current_data$has_passed] <- failName
+        current_data$has_passed <- NULL
+        current_data$Date_Time <- as.POSIXct(current_data$Date_Time, format = "%d-%m-%Y %H:%M:%S")
+        current_data <- current_data %>% filter(!is.na(Date_Time))
+        if (nrow(current_data) != 0) {
+            current_data$Date <- as.Date(current_data$Date_Time, tz = "")
+            return_data <- rbind(return_data, current_data)
+        }
+    }
+    return(return_data)
+}
+
 formatData <- function(data) {
     if ("id" %in% names(data)) {
         idData <- data$id
@@ -96,21 +117,10 @@ formatRemoteData <- function(data) {
     names(data)[1:10] <- static_names
     pass_regex <- "^[pP]|^(ok)|^(OK)|^(Ok)"
     data$has_passed <- str_detect(data$Result, pass_regex)
-    data$Result[data$has_passed] <- "Pass"
-    data$Result[!data$has_passed] <- "Fail"
+    data$Result[data$has_passed] <- passName
+    data$Result[!data$has_passed] <- failName
     data$has_passed <- NULL
     data$Date_Time <- as.POSIXct(data$Date_Time, format = "%d-%m-%Y %H:%M:%S")
-    # if (str_detect(data$Date_Time[1], "[0-9]{2}-[0-9]{2}-[0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2}")) {
-    #     data$Date_Time <- as.POSIXct(data$Date_Time, format = "%d-%m-%Y %H:%M:%S")
-    # } else if (str_detect(data$Date_Time[1], "[0-9]{2} [0-9]{2} [0-9]{4} [0-9]{2} [0-9]{2} [0-9]{2}")) {
-    #     data$Date_Time <- as.POSIXct(data$Date_Time, format = "%d %m %Y %H %M %S")
-    # } else if (str_detect(data$Date_Time[1], "[0-9]{2} [a-zA-Z]+ [0-9]{4} [0-9]{2} [0-9]{2} [0-9]{2}")) {
-    #     data$Date_Time <- as.POSIXct(data$Date_Time, format = "%d %b %Y %H %M %S")
-    # } else if (str_detect(data$Date_Time[1], "[0-9]{2}-[a-zA-Z]+-[0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2}")) {
-    #     data$Date_Time <- as.POSIXct(data$Date_Time, format = "%d %b %Y %H:%M:%S")
-    # } else {
-    #     data$Date_Time <- as.POSIXct(data$Date_Time)
-    # }
     data <- data %>% filter(!is.na(Date_Time))
     data$shift <- getShifts(data$Date_Time)
     data$Date <- as.Date(data$Date_Time, tz = "")
@@ -131,8 +141,8 @@ formatLocalData <- function(data) {
     names(data)[1:10] <- static_names
     pass_regex <- "^[pP]|^(ok)|^(OK)|^(Ok)"
     data$has_passed <- str_detect(data$Result, pass_regex)
-    data$Result[data$has_passed] <- "Pass"
-    data$Result[!data$has_passed] <- "Fail"
+    data$Result[data$has_passed] <- passName
+    data$Result[!data$has_passed] <- failName
     data$has_passed <- NULL
     data$Date_Time <- as.POSIXct(data$Date_Time, format = "%d-%m-%Y %H:%M:%S")
     data <- data %>% filter(!is.na(Date_Time))
