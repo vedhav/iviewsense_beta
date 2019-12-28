@@ -144,7 +144,7 @@ server = function(input, output, session) {
 					3, style = "margin-top: 25px;", allign = "left",
 					switchInput(
 						inputId = "summary_stats_type", size = "mini",
-						onLabel = "Show percentage", offLabel = "Show numbers", value = TRUE
+						onLabel = "Show percentage", offLabel = "Show numbers", value = FALSE
 					)
 				)
 			),
@@ -195,7 +195,8 @@ server = function(input, output, session) {
 			plotData$Text <- paste0(round(plotData$FTR, 0), "%")
 			plot <- plot_ly(
 				data = plotData, x = ~Date, y = ~FTR, text = ~Text, textposition = 'auto',
-				marker = list(color = "#5ac938"), type = "bar"
+				marker = list(color = "#5ac938"), type = "bar", name = "",
+				hovertemplate = paste0("<i>Date: %{x}<br>FTR: %{text}</i>")
 			) %>% layout(barmode = 'stack', title = "Daily status", legend = list(y = 0.5))
 		} else {
 			plotData <- all_table_data %>% filter(Date >= input$summary_filters_date_from & Date <= input$summary_filters_date_to) %>%
@@ -203,11 +204,17 @@ server = function(input, output, session) {
 			plotData$Date <- format(plotData$Date, format = "%d-%b-%y")
 			plotData$Result[plotData$Result == passName] <- "FTR"
 			plotData$Result[plotData$Result == failName] <- "Fail"
+			plotData$csum <- ave(plotData$count, plotData$Date, FUN = cumsum) - (mean(plotData$count)/4)
+			plotData$csum <- if_else(plotData$csum < 10, 10, plotData$csum)
 			plot <- plot_ly(
 				data = plotData, x = ~Date, y = ~count, color = ~Result,
-				colors = c("#edb009", "#5ac938"),
-				type = "bar"
-			) %>% layout(barmode = 'stack', title = "Daily status", legend = list(y = 0.5))
+				colors = c("#edb009", "#5ac938"), type = "bar"
+			) %>%
+			add_annotations(
+				y = plotData$csum, text = plotData$count, name = "",
+				showarrow = FALSE, xanchor = "center"
+			) %>%
+			layout(barmode = 'stack', title = "Daily status", legend = list(y = 0.5))
 		}
 		return(plot)
 	})
@@ -224,9 +231,12 @@ server = function(input, output, session) {
 			plotDataCount <- plotData %>% group_by(Machine) %>% summarise(count = sum(count))
 			plotData <- inner_join(plotDataPass, plotDataCount, by = "Machine")
 			plotData$FTR <- round(plotData$pass/plotData$count * 100)
+			plotData$Text <- paste0(round(plotData$FTR, 0), "%")
 			plot <- plot_ly(
 				data = plotData, x = ~FTR, y = reorder(plotData$Machine, plotData$FTR),
-				marker = list(color = "#5ac938"), type = "bar"
+				text = ~Text, textposition = 'auto',
+				marker = list(color = "#5ac938"), type = "bar", name = "",
+				hovertemplate = paste0("<i>Machine: %{y}<br>FTR: %{text}</i>")
 			) %>% layout(barmode = 'stack', title = "Machine status", legend = list(y = 0.5))
 		} else {
 			plotData <- all_table_data %>% filter(Date >= input$summary_filters_date_from & Date <= input$summary_filters_date_to) %>%
@@ -253,9 +263,11 @@ server = function(input, output, session) {
 			plotDataCount <- plotData %>% group_by(Cust) %>% summarise(count = sum(count))
 			plotData <- inner_join(plotDataPass, plotDataCount, by = "Cust")
 			plotData$FTR <- round(plotData$pass/plotData$count * 100)
+			plotData$Text <- paste0(round(plotData$FTR, 0), "%")
 			plot <- plot_ly(
 				data = plotData, x = ~FTR, y = reorder(plotData$Cust, plotData$FTR),
-				marker = list(color = "#5ac938"), type = "bar"
+				marker = list(color = "#5ac938"), type = "bar", name = "", text = ~Text, textposition = 'auto',
+				hovertemplate = paste0("<i>Customer: %{y}<br>FTR: %{text}</i>")
 			) %>% layout(barmode = 'stack', title = "Customer status", legend = list(y = 0.5))
 		} else {
 			plotData <- all_table_data %>% filter(Date >= input$summary_filters_date_from & Date <= input$summary_filters_date_to) %>%
@@ -282,9 +294,11 @@ server = function(input, output, session) {
 			plotDataCount <- plotData %>% group_by(Family) %>% summarise(count = sum(count))
 			plotData <- inner_join(plotDataPass, plotDataCount, by = "Family")
 			plotData$FTR <- round(plotData$pass/plotData$count * 100)
+			plotData$Text <- paste0(round(plotData$FTR, 0), "%")
 			plot <- plot_ly(
 				data = plotData, x = ~FTR, y = reorder(plotData$Family, plotData$FTR),
-				marker = list(color = "#5ac938"), type = "bar"
+				marker = list(color = "#5ac938"), type = "bar", name = "", text = ~Text, textposition = 'auto',
+				hovertemplate = paste0("<i>Family: %{y}<br>FTR: %{text}</i>")
 			) %>% layout(barmode = 'stack', title = "Family status", legend = list(y = 0.5))
 		} else {
 			plotData <- all_table_data %>% filter(Date >= input$summary_filters_date_from & Date <= input$summary_filters_date_to) %>%
@@ -311,9 +325,11 @@ server = function(input, output, session) {
 			plotDataCount <- plotData %>% group_by(Model) %>% summarise(count = sum(count))
 			plotData <- inner_join(plotDataPass, plotDataCount, by = "Model")
 			plotData$FTR <- round(plotData$pass/plotData$count * 100)
+			plotData$Text <- paste0(round(plotData$FTR, 0), "%")
 			plot <- plot_ly(
 				data = plotData, x = ~FTR, y = reorder(plotData$Model, plotData$FTR),
-				marker = list(color = "#5ac938"), type = "bar"
+				marker = list(color = "#5ac938"), type = "bar", name = "", text = ~Text, textposition = 'auto',
+				hovertemplate = paste0("<i>Model: %{y}<br>FTR: %{text}</i>")
 			) %>% layout(barmode = 'stack', title = "Model status", legend = list(y = 0.5))
 		} else {
 			plotData <- all_table_data %>% filter(Date >= input$summary_filters_date_from & Date <= input$summary_filters_date_to) %>%
@@ -817,7 +833,7 @@ server = function(input, output, session) {
 			column(
 				4,
 				pickerInput(
-					"scatter_plot_y_axis", "Select the X axis variable",
+					"scatter_plot_y_axis", "Select the Y axis variable",
 					numericPlotVariables, numericPlotVariables[2],
 					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
 				)
@@ -963,111 +979,132 @@ server = function(input, output, session) {
 		passCountData <- filterData %>% group_by(Family, Cust, shift, Model, Opr, DayOfWeek) %>%
 			summarise(passCount = sum(hasPassed), failCount = n() - passCount) %>%
 			ungroup() %>% select(Family, Cust, shift, passCount, Model, Opr, DayOfWeek, failCount)
-		shiftPlotData <- passCountData %>% group_by(shift) %>%
-			summarise(ftr_percentage = round(sum(passCount) / (sum(passCount) + sum(failCount)) * 100, 1))
-		familyPlotData <- passCountData %>% group_by(Family) %>%
-			summarise(ftr_percentage = round(sum(passCount) / (sum(passCount) + sum(failCount)) * 100, 1))
-		customerPlotData <- passCountData %>% group_by(Cust) %>%
-			summarise(ftr_percentage = round(sum(passCount) / (sum(passCount) + sum(failCount)) * 100, 1))
-		modelPlotData <- passCountData %>% group_by(Model) %>%
-			summarise(ftr_percentage = round(sum(passCount) / (sum(passCount) + sum(failCount)) * 100, 1))
-		operatorPlotData <- passCountData %>% group_by(Opr) %>%
-			summarise(ftr_percentage = round(sum(passCount) / (sum(passCount) + sum(failCount)) * 100, 1))
-		dayOfWeekPlotData <- passCountData %>% group_by(DayOfWeek) %>%
-			summarise(ftr_percentage = round(sum(passCount) / (sum(passCount) + sum(failCount)) * 100, 1))
-		output$stratification_shift <- renderPlotly({
-			if (nrow(shiftPlotData) == 0) return(ggplotly(textPlot()))
-			plot_ly(
-				data = shiftPlotData,
-				x = ~ftr_percentage,
-				y = reorder(shiftPlotData$shift, shiftPlotData$ftr_percentage),
-				height = 250,
-				type = "bar", orientation = 'h',
-				hovertemplate = paste(
-					"<i>%{y}'s FTR percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
-				)
-			) %>% layout(
-				title = "% of FTR across different Shifts",
-				xaxis = list(visible = FALSE)
-			) %>% config(displayModeBar = FALSE)
-		})
+		familyPlotData <- passCountData %>% select(Family, Pass = passCount, Fail = failCount) %>%
+			gather(key = "key", value = "value", 2:3) %>%
+			group_by(Family, key) %>% summarise(value = sum(value))
+		customerPlotData <- passCountData %>% select(Cust, Pass = passCount, Fail = failCount) %>%
+			gather(key = "key", value = "value", 2:3) %>%
+			group_by(Cust, key) %>% summarise(value = sum(value))
+		modelPlotData <- passCountData %>% select(Model, Pass = passCount, Fail = failCount) %>%
+			gather(key = "key", value = "value", 2:3) %>%
+			group_by(Model, key) %>% summarise(value = sum(value))
+		shiftPlotData <- passCountData %>% select(shift, Pass = passCount, Fail = failCount) %>%
+			gather(key = "key", value = "value", 2:3) %>%
+			group_by(shift, key) %>% summarise(value = sum(value))
+		shiftPlotData <- inner_join(shiftPlotData, shifts_order, by = c("shift" = "shifts"))
+		shiftPlotData <- shiftPlotData %>% arrange(order_value)
+		dayOfWeekPlotData <- passCountData %>% select(DayOfWeek, Pass = passCount, Fail = failCount) %>%
+			gather(key = "key", value = "value", 2:3) %>%
+			group_by(DayOfWeek, key) %>% summarise(value = sum(value))
+		operatorPlotData <- passCountData %>% select(Opr, Pass = passCount, Fail = failCount) %>%
+			gather(key = "key", value = "value", 2:3) %>%
+			group_by(Opr, key) %>% summarise(value = sum(value))
+		dayOfWeekPlotData <- inner_join(dayOfWeekPlotData, day_of_the_weeks_order, by = c("DayOfWeek" = "dow"))
+		dayOfWeekPlotData <- dayOfWeekPlotData %>% arrange(order_value)
 		output$stratification_family <- renderPlotly({
 			if (nrow(familyPlotData) == 0) return(ggplotly(textPlot()))
 			plot_ly(
 				data = familyPlotData,
-				x = ~ftr_percentage,
-				y = reorder(familyPlotData$Family, familyPlotData$ftr_percentage),
-				height = 160,
+				x = ~value, color = ~key, text = ~value, colors = c("#edb009", "#5ac938"),
+				y = reorder(familyPlotData$Family, familyPlotData$value),
+				height = 200, textposition = "auto",
+				textfont = list(color = "#000000"),
 				type = "bar", orientation = 'h',
 				hovertemplate = paste(
-					"<i>%{y}'s FTR percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
+					"<i>%{y}'s count</i>: <b>%{x}</b><extra></extra>"
 				)
 			) %>% layout(
-				title = "% of FTR across different Families",
-				xaxis = list(visible = FALSE)
+				title = "Pass-Fail across <b>Family</b>",
+				xaxis = list(title = ""), showlegend = FALSE
 			) %>% config(displayModeBar = FALSE)
 		})
 		output$stratification_customer <- renderPlotly({
 			if (nrow(customerPlotData) == 0) return(ggplotly(textPlot()))
 			plot_ly(
 				data = customerPlotData,
-				x = ~ftr_percentage,
-				y = reorder(customerPlotData$Cust, customerPlotData$ftr_percentage),
-				height = 200,
+				x = ~value, color = ~key, text = ~value, colors = c("#edb009", "#5ac938"),
+				y = reorder(customerPlotData$Cust, customerPlotData$value),
+				height = 200, textposition = "auto",
+				textfont = list(color = "#000000"),
 				type = "bar", orientation = 'h',
 				hovertemplate = paste(
-					"<i>%{y}'s FTR percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
+					"<i>%{y}'s count</i>: <b>%{x}</b><extra></extra>"
 				)
 			) %>% layout(
-				title = "% of FTR across different Customers",
-				xaxis = list(visible = FALSE)
+				title = "Pass-Fail across <b>Customer</b>",
+				xaxis = list(title = ""), showlegend = FALSE
 			) %>% config(displayModeBar = FALSE)
 		})
 		output$stratification_model <- renderPlotly({
 			if (nrow(modelPlotData) == 0) return(ggplotly(textPlot()))
 			plot_ly(
 				data = modelPlotData,
-				x = ~ftr_percentage,
-				y = reorder(modelPlotData$Model, modelPlotData$ftr_percentage),
+				x = ~value, color = ~key, text = ~value, colors = c("#edb009", "#5ac938"),
+				y = reorder(modelPlotData$Model, modelPlotData$value),
+				height = 200, textposition = "auto",
+				textfont = list(color = "#000000"),
 				type = "bar", orientation = 'h',
 				hovertemplate = paste(
-					"<i>%{y}'s FTR percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
+					"<i>%{y}'s count</i>: <b>%{x}</b><extra></extra>"
 				)
 			) %>% layout(
-				title = "% of FTR across different Models",
-				xaxis = list(visible = FALSE)
+				title = "Pass-Fail across <b>Model</b>",
+				xaxis = list(title = ""), showlegend = FALSE
 			) %>% config(displayModeBar = FALSE)
 		})
-		output$stratification_operator <- renderPlotly({
-			if (nrow(operatorPlotData) == 0) return(ggplotly(textPlot()))
+		output$stratification_shift <- renderPlotly({
+			if (nrow(shiftPlotData) == 0) return(ggplotly(textPlot()))
 			plot_ly(
-				data = operatorPlotData,
-				x = ~ftr_percentage,
-				y = reorder(operatorPlotData$Opr, operatorPlotData$ftr_percentage),
-				height = 250,
+				data = shiftPlotData,
+				x = ~value, color = ~key, text = ~value, colors = c("#edb009", "#5ac938"),
+				y = reorder(shiftPlotData$shift, -shiftPlotData$order_value),
+				height = 350, textposition = "auto",
+				textfont = list(color = "#000000"),
 				type = "bar", orientation = 'h',
 				hovertemplate = paste(
-					"<i>%{y}'s FTR percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
+					"<i>%{y}'s count</i>: <b>%{x}</b><extra></extra>"
 				)
 			) %>% layout(
-				title = "% of FTR across different Operators",
-				xaxis = list(visible = FALSE)
+				title = "Pass-Fail across different <b>Shifts</b>",
+				xaxis = list(title = ""), showlegend = FALSE
 			) %>% config(displayModeBar = FALSE)
 		})
 		output$stratification_day_of_week <- renderPlotly({
 			if (nrow(dayOfWeekPlotData) == 0) return(ggplotly(textPlot()))
 			plot_ly(
 				data = dayOfWeekPlotData,
-				x = ~ftr_percentage,
-				y = reorder(dayOfWeekPlotData$DayOfWeek, dayOfWeekPlotData$ftr_percentage),
-				height = 250,
+				x = ~value, color = ~key, text = ~value, colors = c("#edb009", "#5ac938"),
+				y = reorder(dayOfWeekPlotData$DayOfWeek, -dayOfWeekPlotData$order_value),
+				height = 400, textposition = "auto",
+				textfont = list(color = "#000000"),
 				type = "bar", orientation = 'h',
 				hovertemplate = paste(
-					"<i>%{y}'s FTR percentage</i>: <b>%{x:.2f}%</b><extra></extra>"
+					"<i>%{y}'s count</i>: <b>%{x}</b><extra></extra>"
 				)
 			) %>% layout(
-				title = "% of FTR across different days of the week"
+				title = "Pass-Fail across different <b>days of the week</b>",
+				xaxis = list(title = ""), showlegend = FALSE
 			) %>% config(displayModeBar = FALSE)
+		})
+		output$stratification_operator <- renderPlotly({
+			if (nrow(operatorPlotData) == 0) return(ggplotly(textPlot()))
+			plot_ly(
+				data = operatorPlotData,
+				x = ~value, color = ~key, text = ~value, colors = c("#edb009", "#5ac938"),
+				y = reorder(operatorPlotData$Opr, operatorPlotData$value),
+				height = 200, textposition = "auto",
+				textfont = list(color = "#000000"),
+				type = "bar", orientation = 'h',
+				hovertemplate = paste(
+					"<i>%{y}'s count</i>: <b>%{x}</b><extra></extra>"
+				)
+			) %>% layout(
+				title = "Pass-Fail across different <b>Operators</b>",
+				xaxis = list(title = ""), showlegend = FALSE
+			) %>% config(displayModeBar = FALSE)
+		})
+		output$stratification_legends <- renderUI({
+			tags$img(src = "stratification_legends.png", height = "40px", width = "200px", align = "center")
 		})
 		shiftOneData <- constFields %>% left_join(unformattedData %>% filter(shift == shiftNames[1]), by = c("Family", "Cust")) %>%
 			select(Family, Customer = Cust, Pass = passCount, Fail = failCount) %>% arrange(Family, Customer)

@@ -33,9 +33,9 @@ textPlot <- function(text = "No data avaliable", color = "#000000") {
 getShifts <- function(hourList) {
 	hourList <- hour(hourList)
 	shiftString <- rep("Date Error", length(hourList))
-	shiftOnecondition <- hourList < 7
-	shiftTwocondition <- hourList >= 7 & hourList < 15
-	shiftThreecondition <- hourList >= 15
+	shiftOnecondition <- hourList > 6 & hourList <= 15
+	shiftTwocondition <- hourList > 15 & hourList <= 24
+	shiftThreecondition <- hourList <= 6
 	shiftString[shiftOnecondition] <- shiftNames[1]
 	shiftString[shiftTwocondition] <- shiftNames[2]
 	shiftString[shiftThreecondition] <- shiftNames[3]
