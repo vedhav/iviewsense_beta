@@ -48,11 +48,11 @@ ui = tags$div(
 				elevation = 3,
 				opacity = 0.9,
 				bs4SidebarMenu(
-					bs4SidebarMenuItem(
-						text = "Summary",
-						tabName = "summary",
-						icon = "chart-pie"
-					),
+					# bs4SidebarMenuItem(
+					# 	text = "Summary",
+					# 	tabName = "summary",
+					# 	icon = "chart-pie"
+					# ),
 					bs4SidebarMenuItem(
 						text = "Data Source",
 						tabName = "data_source",
@@ -92,7 +92,7 @@ ui = tags$div(
 			),
 			body = bs4DashBody(
 				bs4TabItems(
-					summary_body,
+					# summary_body,
 					data_source_body,
 					control_chart_body,
 					histogram_body,
@@ -116,6 +116,8 @@ server = function(input, output, session) {
 	checkSheetFilterDataDisplay <- data.frame()
 	checkSheetCreateData <- data.frame()
 	config_table <- data.frame()
+	lsl_usl_data <- data.frame()
+	lsl_usl_data_display <- data.frame()
 	all_table_data <- tibble()
 	currentTableName <- ""
 
@@ -371,15 +373,63 @@ server = function(input, output, session) {
 			} else {
 				config_table <<- selectDbQuery("SELECT * FROM config")
 				config_machine_options <- unique(config_table$Machine)
-				ui <- fluidRow(
-					column(3, pickerInput("config_machine", "Machine", config_machine_options, config_machine_options[1])),
-					column(3, pickerInput("config_customer", "Customer", "", "")),
-					column(3, pickerInput("config_family", "Family", "", "")),
-					column(3, pickerInput("config_model", "Model", "", ""))
+				ui <- tags$div(
+					fluidRow(
+						column(3, pickerInput("config_machine", "Machine", config_machine_options, config_machine_options[1])),
+						column(3, pickerInput("config_customer", "Customer", "", "")),
+						column(3, pickerInput("config_family", "Family", "", "")),
+						column(3, pickerInput("config_model", "Model", "", ""))
+					),
+					tags$div(
+						id = 'admin_authentication_div',
+						fluidRow(
+							style = "margin-top: 20vh",
+							column(3, ""),
+							column(3, passwordInput('admin_password', '', placeholder = 'Enter admin password', width = "100%")),
+							column(1, actionButton('login_button', 'Login', style = buttonStyle)),
+							column(2, style = "margin-top: 23px", actionLink('password_change_button', 'Change password')),
+							column(3, "")
+						)
+					),
+					shinyjs::hidden(
+						tags$div(
+							id = 'admin_div',
+							fluidRow(
+								column(12, DTOutput("admin_editable_table"))
+							)
+						)
+					)
 				)
 			}
 			return(ui)
 		})
+	})
+	observeEvent(input$password_change_button, {
+		showModal(
+			modalDialog(
+				title = NULL, easyClose = TRUE, footer = NULL,
+				fluidRow(
+					align = "center",
+					column(12, passwordInput("password_reset_old_password", "Enter the Old Password")),
+					column(12, passwordInput("password_reset_new_password_1", "Enter a New Password")),
+					column(12, passwordInput("password_reset_new_password_2", "Confirm a New Password")),
+					column(12, actionButton("update_new_admin_password", "Update Password", style = buttonStyle))
+				)
+			)
+		)
+	})
+	observeEvent(input$update_new_admin_password, {
+		actual_admin_password <- selectDbQuery("SELECT * FROM config_table_master WHERE table_name = 'admin_password'")
+		if (digest(input$password_reset_old_password) != actual_admin_password$column_name) {
+			popUpWindow("The old password you entered is incorrect")
+			return()
+		}
+		if (input$password_reset_new_password_1 != input$password_reset_new_password_2) {{
+			popUpWindow("The new passwords do not match, please try again")
+			return()
+		}}
+		updateAdminPassword(digest(input$password_reset_new_password_1))
+		popUpWindow("The admin password has been changed")
 	})
 	observeEvent(c(input$config_machine, input$remote_or_local), {
 		config_table_filtered <- config_table %>% filter(Machine == input$config_machine)
@@ -405,6 +455,7 @@ server = function(input, output, session) {
 		if (nrow(config_table_filtered) != 0) {
 			currentTableName <<- config_table_filtered$TABLE_NAME[1]
 			print(paste0("Fetching data from ", config_table_filtered$TABLE_NAME[1]))
+			lsl_usl_data <<- selectDbQuery("SELECT * FROM config_table_master WHERE table_name = ?", list(currentTableName))
 			mainData <<- tryCatch({
 				selectDbQuery(paste0("SELECT * FROM `", config_table_filtered$TABLE_NAME[1], "`")) %>% formatRemoteData()
 			}, error = function(err) {
@@ -426,6 +477,43 @@ server = function(input, output, session) {
 			hasDbConnection <<- TRUE
 			plots__trigger$trigger()
 		}
+		observeEvent(input$login_button, {
+			# req(input$admin_password)
+			req(input$config_machine)
+			req(input$config_customer)
+			req(input$config_family)
+			req(input$config_model)
+			lsl_usl_data <<- selectDbQuery("SELECT * FROM config_table_master WHERE table_name = ?", list(currentTableName))
+			actual_admin_password <- selectDbQuery("SELECT * FROM config_table_master WHERE table_name = 'admin_password'")
+			if (digest(input$admin_password) == actual_admin_password$column_name) {
+				lsl_usl_data_display <<- lsl_usl_data %>% select(-table_name)
+				output$admin_editable_table <- renderDT({
+					datatable(
+						lsl_usl_data_display,
+						rownames = FALSE,
+						editable = TRUE,
+						class = "cell-border stripe",
+						options = list(dom = 'tip', pageLength = -1)
+					)
+				})
+				admin_editable_table_output_proxy <- dataTableProxy("admin_editable_table")
+				observeEvent(input$admin_editable_table_cell_edit, {
+					info = input$admin_editable_table_cell_edit
+					this_id <- lsl_usl_data[info$row, "id"]
+					this_column_name <- lsl_usl_data[info$row, "column_name"]
+					update_column_name <- names(lsl_usl_data_display)[info$col+1]
+					updateUnitsTable(id = this_id, column_name = update_column_name, value = info$value)
+					lsl_usl_data[lsl_usl_data$id == this_id, update_column_name] <<- info$value
+					lsl_usl_data_display[lsl_usl_data_display$id == this_id, update_column_name] <<- info$value
+					# This might be optional
+					# replaceData(admin_editable_table_output_proxy, lsl_usl_data_display, resetPaging = FALSE, rownames = FALSE)
+				})
+				shinyjs::hide("admin_authentication_div", anim = TRUE)
+				shinyjs::show("admin_div", anim = TRUE)
+			} else {
+				popUpWindow("The password is incorrect")
+			}
+		})
 	})
 	observeEvent(input$data_source_input_file, {
 		inFile <- input$data_source_input_file
@@ -451,7 +539,8 @@ server = function(input, output, session) {
 		custOptions <- unique(mainData$Cust)
 		modelOptions <- unique(mainData$Model)
 		resultOptions <- unique(mainData$Result)
-		plotVariables <- names(mainData)[11:51]
+		numericData <- select_if(mainData[,11:(ncol(mainData)-5)], is.numeric)
+		plotVariables <- names(numericData)
 		fluidRow(
 			column(
 				2,
@@ -527,12 +616,16 @@ server = function(input, output, session) {
 				4, offset = 1,
 				pickerInput(
 					"control_chart_column", "Select the plot variable",
-					plotVariables, "CW_1",
+					plotVariables, plotVariables[1],
 					options = pickerOptions(actionsBox = TRUE, selectAllText = "All", deselectAllText = "None")
 				)
 			),
 			column(3, numericInput("control_chart_lcl", "Enter the LCL", value = 0)),
-			column(3, numericInput("control_chart_ucl", "Enter the UCL", value = 0))
+			column(3, numericInput("control_chart_ucl", "Enter the UCL", value = 0)),
+			column(
+				1, style = "margin-top: 35px",
+				prettySwitch(inputId = "control_chart_one_manual_automatic", label = "Actual",  status = "primary", slim = TRUE)
+			)
 		)
 	})
 	observeEvent(c(
@@ -540,7 +633,8 @@ server = function(input, output, session) {
 		input$control_chart_filters_cust, input$control_chart_filters_model,
 		input$control_chart_filters_result, input$control_chart_filters_date_from,
 		input$control_chart_filters_date_to, input$control_chart_filters_shift,
-		input$control_chart_filters_operator, input$control_chart_filters_machine), {
+		input$control_chart_filters_operator, input$control_chart_filters_machine,
+		input$control_chart_one_manual_automatic, input$control_chart_r_manual_automatic), {
 		plotData <- mainData %>%
 			filter(
 				Family %in% input$control_chart_filters_family & Cust %in% input$control_chart_filters_cust &
@@ -559,6 +653,10 @@ server = function(input, output, session) {
 		outPlot <- qcc(data = plot_variable, type = "xbar.one", plot = FALSE)
 		lslValue <- round(outPlot$limits[1], 2)
 		uslValue <- round(outPlot$limits[2], 2)
+		if (input$control_chart_one_manual_automatic) {
+			lslValue <- lsl_usl_data$LSL[lsl_usl_data$column_name == input$control_chart_column]
+			uslValue <- lsl_usl_data$USL[lsl_usl_data$column_name == input$control_chart_column]
+		}
 		updateNumericInput(
 			session, "control_chart_lcl", value = lslValue
 			# label = HTML(paste0("Enter the LCL (mean - 3 x sd = ", lslValue, ")"))
@@ -584,6 +682,10 @@ server = function(input, output, session) {
 			outPlot <- qcc(data = matrixData, type = "R", plot = FALSE)
 			lslValue <- round(outPlot$limits[1], 2)
 			uslValue <- round(outPlot$limits[2], 2)
+			if (input$control_chart_r_manual_automatic) {
+				lslValue <- lsl_usl_data$LSL[lsl_usl_data$column_name == input$control_chart_column]
+				uslValue <- lsl_usl_data$USL[lsl_usl_data$column_name == input$control_chart_column]
+			}
 			updateNumericInput(
 				session, "control_chart_r_lcl", value = lslValue
 				# label = HTML(paste0("Enter the LCL (mean - 3 x sd = ", lslValue, ")"))
@@ -612,7 +714,8 @@ server = function(input, output, session) {
 	######################################## HISTOGRAM ########################################
 	output$histogram_filters <- renderUI({
 		plots__trigger$depend()
-		plotVariables <- names(mainData)[11:51]
+		numericData <- select_if(mainData[,11:(ncol(mainData)-5)], is.numeric)
+		plotVariables <- names(numericData)
 		fluidRow(
 			column(
 				2,
@@ -685,7 +788,7 @@ server = function(input, output, session) {
 				)
 			),
 			column(
-				4, offset = 1,
+				4,
 				pickerInput(
 					"histogram_column", "Select the plot variable",
 					plotVariables, "CW_1",
@@ -693,7 +796,11 @@ server = function(input, output, session) {
 				)
 			),
 			column(3, numericInput("histogram_lsl", "Enter the LSL", value = 0)),
-			column(3, numericInput("histogram_usl", "Enter the USL", value = 0))
+			column(3, numericInput("histogram_usl", "Enter the USL", value = 0)),
+			column(
+				1, style = "margin-top: 35px",
+				prettySwitch(inputId = "histogram_manual_automatic", label = "Actual",  status = "primary", slim = TRUE)
+			)
 		)
 	})
 	observeEvent(c(
@@ -701,7 +808,8 @@ server = function(input, output, session) {
 		input$histogram_filters_cust, input$histogram_filters_model,
 		input$histogram_filters_result, input$histogram_filters_date_from,
 		input$histogram_filters_date_to, input$histogram_filters_shift,
-		input$histogram_filters_operator, input$histogram_filters_machine), {
+		input$histogram_filters_operator, input$histogram_filters_machine,
+		input$histogram_manual_automatic), {
 		plotData <- mainData %>%
 			filter(
 				Family %in% input$histogram_filters_family & Cust %in% input$histogram_filters_cust &
@@ -719,6 +827,10 @@ server = function(input, output, session) {
 		outPlot <- qcc(plot_variable, type = "xbar.one", plot = FALSE)
 		lslValue <- round(outPlot$limits[1], 2)
 		uslValue <- round(outPlot$limits[2], 2)
+		if (input$histogram_manual_automatic) {
+			lslValue <- lsl_usl_data$LSL[lsl_usl_data$column_name == input$histogram_column]
+			uslValue <- lsl_usl_data$USL[lsl_usl_data$column_name == input$histogram_column]
+		}
 		updateNumericInput(
 			session, "histogram_lsl", value = lslValue
 			# label = HTML(paste0("Enter the LCL (mean - 3 x sd = ", lslValue, ")"))
@@ -749,8 +861,9 @@ server = function(input, output, session) {
 	######################################## SCATTER PLOT ########################################
 	output$scatter_plot_filters <- renderUI({
 		plots__trigger$depend()
-		numericPlotVariables <- names(select_if(mainData, is.numeric))
-		factorPlotVariables <- names(select_if(mainData, is.character))
+		numericData <- select_if(mainData[,11:(ncol(mainData)-5)], is.numeric)
+		numericPlotVariables <- names(numericData)
+		factorPlotVariables <- names(select_if(mainData[,1:10], is.character))
 		fluidRow(
 			column(
 				2,

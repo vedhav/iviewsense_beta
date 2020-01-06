@@ -66,12 +66,16 @@ control_chart_body <- bs4TabItem(
 				column(
 					12, style = "margin-top: 5vh",
 					fluidRow(
-						column(3, br()),
+						column(2, br()),
 						column(3, numericInput("control_chart_r_lcl", "Enter the LCL", 0, width = "100%")),
-						column(3, numericInput("control_chart_r_ucl", "Enter the UCL", 0, width = "100%"))
+						column(3, numericInput("control_chart_r_ucl", "Enter the UCL", 0, width = "100%")),
+						column(
+							1, style = "margin-top: 35px",
+							prettySwitch(inputId = "control_chart_r_manual_automatic", label = "Actual",  status = "primary", slim = TRUE)
+						)
 					)
 				),
-				column(12, offset = 3, plotOutput("control_chart_plot_xbar_r"))
+				column(12, plotOutput("control_chart_plot_xbar_r"))
 			)
 		)
 	)

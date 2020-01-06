@@ -187,6 +187,20 @@ removeEmptyFishbones <- function(causeList) {
     return(causeList)
 }
 
+updateUnitsTable <- function(id, column_name, value) {
+    execute(
+        paste0("UPDATE config_table_master SET ", column_name, " = ? WHERE id = ?"),
+        list(value, id)
+    )
+}
+
+updateAdminPassword <- function(new_password) {
+    execute(
+        "UPDATE config_table_master SET column_name = ? WHERE table_name = ?",
+        list(new_password, "admin_password")
+    )
+}
+
 killDbxConnections <- function () {
     all_cons <- dbListConnections(databaseDriver)
     for(con in all_cons)
