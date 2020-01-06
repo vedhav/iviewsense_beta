@@ -863,7 +863,7 @@ server = function(input, output, session) {
 		plots__trigger$depend()
 		numericData <- select_if(mainData[,11:(ncol(mainData)-5)], is.numeric)
 		numericPlotVariables <- names(numericData)
-		factorPlotVariables <- names(select_if(mainData[,1:10], is.character))
+		factorPlotVariables <- c(names(select_if(mainData[,1:10], is.character)), "shift")
 		fluidRow(
 			column(
 				2,
@@ -975,6 +975,10 @@ server = function(input, output, session) {
 			)
 		if (nrow(plotData) == 0) return(ggplotly(textPlot()))
 		if (input$scatter_plot_color_axis == "No color") {
+			x_axis_unit <- lsl_usl_data$Units[lsl_usl_data$column_name == input$scatter_plot_x_axis]
+			x_axis_title <- paste0(input$scatter_plot_x_axis, " (", x_axis_unit, ")") %>% gsub(pattern = "\\(\\)", replacement = "")
+			y_axis_unit <- lsl_usl_data$Units[lsl_usl_data$column_name == input$scatter_plot_y_axis]
+			y_axis_title <- paste0(input$scatter_plot_y_axis, " (", y_axis_unit, ")") %>% gsub(pattern = "\\(\\)", replacement = "")
 			xyPlotData <- plotData %>% select(one_of(input$scatter_plot_x_axis, input$scatter_plot_y_axis))
 			if (ncol(xyPlotData) != 1) {
 				xyPlotData <- xyPlotData[complete.cases(xyPlotData), ]
@@ -992,8 +996,8 @@ server = function(input, output, session) {
 				line = list(color = "#000000"), inherit = FALSE
 			) %>%
 			layout(
-				xaxis = list(title = input$scatter_plot_x_axis),
-				yaxis = list(title = input$scatter_plot_y_axis)
+				xaxis = list(title = x_axis_title),
+				yaxis = list(title = y_axis_title)
 			)
 		} else {
 			xyColorPlotData <- plotData %>% select(one_of(input$scatter_plot_x_axis, input$scatter_plot_y_axis, input$scatter_plot_color_axis))
@@ -1002,6 +1006,10 @@ server = function(input, output, session) {
 			xVariable <- xyColorPlotData[[input$scatter_plot_x_axis]]
 			yVariable <- xyColorPlotData[[input$scatter_plot_y_axis]]
 			colorVariable <- xyColorPlotData[[input$scatter_plot_color_axis]]
+			x_axis_unit <- lsl_usl_data$Units[lsl_usl_data$column_name == input$scatter_plot_x_axis]
+			x_axis_title <- paste0(input$scatter_plot_x_axis, " (", x_axis_unit, ")") %>% gsub(pattern = "\\(\\)", replacement = "")
+			y_axis_unit <- lsl_usl_data$Units[lsl_usl_data$column_name == input$scatter_plot_y_axis]
+			y_axis_title <- paste0(input$scatter_plot_y_axis, " (", y_axis_unit, ")") %>% gsub(pattern = "\\(\\)", replacement = "")
 			plot <- plot_ly(
 				data = xyColorPlotData, x = xVariable,
 				y = yVariable, color = colorVariable,
@@ -1013,8 +1021,8 @@ server = function(input, output, session) {
 				line = list(color = "#000000"), inherit = FALSE
 			) %>%
 			layout(
-				xaxis = list(title = input$scatter_plot_x_axis),
-				yaxis = list(title = input$scatter_plot_y_axis)
+				xaxis = list(title = x_axis_title),
+				yaxis = list(title = y_axis_title)
 			)
 		}
 		return(plot)
