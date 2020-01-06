@@ -3,6 +3,23 @@ source("constants.R")
 source("helper.R")
 
 
+summary_body <- bs4TabItem(
+	tabName = "summary",
+	tags$div(
+		fluidPage(
+			fluidRow(
+				column(12, align = "center", style = "font-size: 20px;", "Summary")
+			),
+			fluidRow(
+				column(
+					12,
+					uiOutput("summary_body_ui")
+				)
+			)
+		)
+	)
+)
+
 data_source_body <- bs4TabItem(
 	tabName = "data_source",
 	tags$div(
@@ -49,12 +66,16 @@ control_chart_body <- bs4TabItem(
 				column(
 					12, style = "margin-top: 5vh",
 					fluidRow(
-						column(3, br()),
+						column(2, br()),
 						column(3, numericInput("control_chart_r_lcl", "Enter the LCL", 0, width = "100%")),
-						column(3, numericInput("control_chart_r_ucl", "Enter the UCL", 0, width = "100%"))
+						column(3, numericInput("control_chart_r_ucl", "Enter the UCL", 0, width = "100%")),
+						column(
+							1, style = "margin-top: 35px",
+							prettySwitch(inputId = "control_chart_r_manual_automatic", label = "Actual",  status = "primary", slim = TRUE)
+						)
 					)
 				),
-				column(12, offset = 3, plotOutput("control_chart_plot_xbar_r"))
+				column(12, plotOutput("control_chart_plot_xbar_r"))
 			)
 		)
 	)
@@ -98,13 +119,15 @@ stratification_body <- bs4TabItem(
 				column(12, align = "center", uiOutput("stratification_filters")),
 				column(12, align = "center", tableOutput("stratification_table")),
 				column(12, br()),
-				column(4, plotlyOutput("stratification_shift", height = 250)),
-				column(4, plotlyOutput("stratification_operator", height = 250)),
-				column(4, plotlyOutput("stratification_day_of_week", height = 250)),
+				column(12, align = "center", uiOutput("stratification_legends")),
 				column(12, br()),
-				column(4, plotlyOutput("stratification_family")),
-				column(4, plotlyOutput("stratification_customer")),
-				column(4, plotlyOutput("stratification_model"))
+				column(4, plotlyOutput("stratification_family", height = 200)),
+				column(4, plotlyOutput("stratification_customer", height = 200)),
+				column(4, plotlyOutput("stratification_model", height = 200)),
+				column(12, br()),
+				column(4, plotlyOutput("stratification_shift")),
+				column(4, plotlyOutput("stratification_day_of_week")),
+				column(4, plotlyOutput("stratification_operator"))
 			)
 		)
 	)

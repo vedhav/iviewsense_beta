@@ -54,6 +54,15 @@ defectsCategories <<- c(
 	"Rimand Web Cracks", "Case-Core Seperation"
 )
 
+day_of_the_weeks_order <<- data.frame(
+	dow = c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"),
+	order_value = c(1:7)
+)
+shifts_order <<- data.frame(
+	shifts = shiftNames,
+	order_value = c(1:3)
+)
+
 emptyVector <- c(rep("", 10))
 fishBoneSkeleton <<- toJSON(
 	data.frame(

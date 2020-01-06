@@ -17,6 +17,7 @@ library(dbx)
 library(RMySQL)
 library(DT)
 library(jsonlite)
+library(digest)
 
 # install.packages(
 # 	c(
